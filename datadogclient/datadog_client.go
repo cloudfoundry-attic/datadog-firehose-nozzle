@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/cloudfoundry/noaa/events"
 )
@@ -23,7 +24,7 @@ func New(apiURL string, apiKey string) *Client {
 	}
 }
 
-func (c *Client) PostTimeSeries(envelopes []events.Envelope) error {
+func (c *Client) PostTimeSeries(envelopes []*events.Envelope) error {
 	url := c.seriesURL()
 	seriesBytes := formatMetrics(envelopes)
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(seriesBytes))
@@ -45,31 +46,31 @@ func (c *Client) seriesURL() string {
 	return url
 }
 
-func formatMetrics(envelopes []events.Envelope) []byte {
-	metricPoints := make(map[metricKey][]point)
+func formatMetrics(envelopes []*events.Envelope) []byte {
+	metricPoints := make(map[metricKey]metricValue)
 
 	for _, envelope := range envelopes {
-        key := metricKey{eventType: envelope.GetEventType(), name: getName(envelope)}
+		key := metricKey{eventType: envelope.GetEventType(), name: getName(envelope), tagsKey: getTagsKey(envelope)}
 
-        points := metricPoints[key]
+		mVal := metricPoints[key]
+		value := getValue(envelope)
 
-        value := getValue(envelope)
-
-		points = append(points, point{
+		mVal.tags = getTags(envelope)
+		mVal.points = append(mVal.points, point{
 			timestamp: envelope.GetTimestamp(),
 			value:     value,
 		})
 
-		metricPoints[key] = points
+		metricPoints[key] = mVal
 	}
 
 	metrics := []metric{}
-	for key, points := range metricPoints {
+	for key, mVal := range metricPoints {
 		metrics = append(metrics, metric{
 			Metric: key.name,
-			Points: points,
+			Points: mVal.points,
 			Type:   "gauge",
-			Tags:   []string{},
+			Tags:   mVal.tags,
 		})
 	}
 
@@ -81,9 +82,15 @@ func formatMetrics(envelopes []events.Envelope) []byte {
 type metricKey struct {
 	eventType events.Envelope_EventType
 	name      string
+	tagsKey   string
 }
 
-func getName(envelope events.Envelope) string {
+type metricValue struct {
+	tags   []string
+	points []point
+}
+
+func getName(envelope *events.Envelope) string {
 	switch envelope.GetEventType() {
 	case events.Envelope_ValueMetric:
 		return envelope.GetOrigin() + "." + envelope.GetValueMetric().GetName()
@@ -94,7 +101,7 @@ func getName(envelope events.Envelope) string {
 	}
 }
 
-func getValue(envelope events.Envelope) float64 {
+func getValue(envelope *events.Envelope) float64 {
 	switch envelope.GetEventType() {
 	case events.Envelope_ValueMetric:
 		return envelope.GetValueMetric().GetValue()
@@ -103,6 +110,20 @@ func getValue(envelope events.Envelope) float64 {
 	default:
 		return 0
 	}
+}
+
+func getTagsKey(envelope *events.Envelope) string {
+	return strings.Join(getTags(envelope), ",")
+}
+
+func getTags(envelope *events.Envelope) []string {
+	var tags []string
+
+	for _, tag := range envelope.GetTags() {
+		tags = append(tags, fmt.Sprintf("%s:%s", tag.GetKey(), tag.GetValue()))
+	}
+
+	return tags
 }
 
 type point struct {
@@ -119,7 +140,7 @@ type metric struct {
 	Points []point  `json:"points"`
 	Type   string   `json:"type"`
 	Host   string   `json:"host,omitempty"`
-	Tags   []string `json:"tags"`
+	Tags   []string `json:"tags,omitempty"`
 }
 
 type payload struct {
