@@ -40,7 +40,7 @@ before_install:
 
 install: echo "Build later"
 
-script: "PATH=$HOME/gopath/bin:$PATH ginkgo -r"
+script: "PATH=$GOPATH/bin:$PATH ginkgo -r"
 
 after_success:
 - 'echo "mode: set" > all.coverprofile'
