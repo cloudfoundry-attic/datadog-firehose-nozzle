@@ -36,8 +36,6 @@ before_install:
 - go get -v github.com/onsi/gomega
 - go install -v github.com/onsi/ginkgo/ginkgo
 
-install: echo "Build later"
-
 script: "PATH=$HOME/gopath/bin:$PATH ginkgo -r"
 
 after_success:
