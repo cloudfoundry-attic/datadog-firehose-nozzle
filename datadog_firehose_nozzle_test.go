@@ -42,7 +42,7 @@ var _ = Describe("DatadogFirehoseNozzle", func() {
 		wsFirehoseURL := strings.Replace(httpFirehoseURL, "http", "ws", -1)
 
 		var err error
-		nozzleCommand := exec.Command(pathToNozzleExecutable, wsFirehoseURL, "token", fakeDatadog.URL)
+		nozzleCommand := exec.Command(pathToNozzleExecutable, wsFirehoseURL, "token", fakeDatadog.URL, "apiKey", "1")
 		nozzleSession, err = gexec.Start(
 			nozzleCommand,
 			gexec.NewPrefixedWriter("[o][nozzle] ", GinkgoWriter),
@@ -107,7 +107,7 @@ var _ = Describe("DatadogFirehoseNozzle", func() {
 
 		// eventually receive a batch from fake DD
 		var messageBytes []byte
-		Eventually(fakeDDChan).Should(Receive(&messageBytes))
+		Eventually(fakeDDChan, "2s").Should(Receive(&messageBytes))
 
 		// Break JSON blob into a list of blobs, one for each metric
 		var jsonBlob map[string][]interface{}
@@ -143,7 +143,7 @@ var _ = Describe("DatadogFirehoseNozzle", func() {
 		))
 
 		close(done)
-	})
+	}, 2.0)
 })
 
 func fakeFirehoseHandler(rw http.ResponseWriter, r *http.Request) {
@@ -170,5 +170,7 @@ func fakeDatadogHandler(rw http.ResponseWriter, r *http.Request) {
 	contents, _ := ioutil.ReadAll(r.Body)
 	defer r.Body.Close()
 
-	fakeDDChan <- contents
+	go func() {
+		fakeDDChan <- contents
+	}()
 }

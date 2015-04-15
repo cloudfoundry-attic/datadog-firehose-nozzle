@@ -27,9 +27,8 @@ var _ = Describe("DatadogClient", func() {
 
 	It("posts ValueMetrics in JSON format", func() {
 		c := datadogclient.New(ts.URL, "dummykey")
-		eventList := []*events.Envelope{}
 
-		eventList = append(eventList, &events.Envelope{
+		c.AddMetric(&events.Envelope{
 			Origin:    proto.String("origin"),
 			Timestamp: proto.Int64(1),
 			EventType: events.Envelope_ValueMetric.Enum(),
@@ -43,7 +42,7 @@ var _ = Describe("DatadogClient", func() {
 			},
 		})
 
-		eventList = append(eventList, &events.Envelope{
+		c.AddMetric(&events.Envelope{
 			Origin:    proto.String("origin"),
 			Timestamp: proto.Int64(2),
 			EventType: events.Envelope_ValueMetric.Enum(),
@@ -57,7 +56,7 @@ var _ = Describe("DatadogClient", func() {
 			},
 		})
 
-		err := c.PostTimeSeries(eventList)
+		err := c.PostMetrics()
 		Expect(err).ToNot(HaveOccurred())
 		Eventually(bodyChan).Should(Receive(MatchJSON(`{
 		"series":[
@@ -71,9 +70,8 @@ var _ = Describe("DatadogClient", func() {
 
 	It("registers metrics with the same name but different tags as different", func() {
 		c := datadogclient.New(ts.URL, "dummykey")
-		eventList := []*events.Envelope{}
 
-		eventList = append(eventList, &events.Envelope{
+		c.AddMetric(&events.Envelope{
 			Origin:    proto.String("origin"),
 			Timestamp: proto.Int64(1),
 			EventType: events.Envelope_ValueMetric.Enum(),
@@ -87,7 +85,7 @@ var _ = Describe("DatadogClient", func() {
 			},
 		})
 
-		eventList = append(eventList, &events.Envelope{
+		c.AddMetric(&events.Envelope{
 			Origin:    proto.String("origin"),
 			Timestamp: proto.Int64(2),
 			EventType: events.Envelope_ValueMetric.Enum(),
@@ -101,7 +99,7 @@ var _ = Describe("DatadogClient", func() {
 			},
 		})
 
-		err := c.PostTimeSeries(eventList)
+		err := c.PostMetrics()
 		Expect(err).ToNot(HaveOccurred())
 
 		var receivedBytes []byte
@@ -111,11 +109,10 @@ var _ = Describe("DatadogClient", func() {
 		Expect(receivedBytes).To(ContainSubstring(`["deployment:deployment-name","job:gorouter"]`))
 	})
 
-	It("posts CounterEvents in JSON format", func() {
+	It("posts CounterEvents in JSON format and empties map after post", func() {
 		c := datadogclient.New(ts.URL, "dummykey")
-		eventList := []*events.Envelope{}
 
-		eventList = append(eventList, &events.Envelope{
+		c.AddMetric(&events.Envelope{
 			Origin:    proto.String("origin"),
 			Timestamp: proto.Int64(1),
 			EventType: events.Envelope_CounterEvent.Enum(),
@@ -126,7 +123,7 @@ var _ = Describe("DatadogClient", func() {
 			},
 		})
 
-		eventList = append(eventList, &events.Envelope{
+		c.AddMetric(&events.Envelope{
 			Origin:    proto.String("origin"),
 			Timestamp: proto.Int64(2),
 			EventType: events.Envelope_CounterEvent.Enum(),
@@ -137,7 +134,7 @@ var _ = Describe("DatadogClient", func() {
 			},
 		})
 
-		err := c.PostTimeSeries(eventList)
+		err := c.PostMetrics()
 		Expect(err).ToNot(HaveOccurred())
 		Eventually(bodyChan).Should(Receive(MatchJSON(`{
 		"series":[
@@ -145,6 +142,10 @@ var _ = Describe("DatadogClient", func() {
 				"points":[[1,5],[2,11]],
 				"type":"gauge"}
 		]}`)))
+
+		err = c.PostMetrics()
+		Expect(err).ToNot(HaveOccurred())
+		Eventually(bodyChan).Should(Receive(MatchJSON(`{"series":[]}`)))
 	})
 
 })
