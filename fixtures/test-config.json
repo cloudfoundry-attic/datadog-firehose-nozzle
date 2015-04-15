@@ -1,0 +1,8 @@
+{
+  "TrafficControllerURL": "ws://localhost:8086",
+  "DataDogURL": "http://localhost:8087",
+  "DataDogAPIKey": "some-key",
+  "FlushDurationSeconds": 1,
+  "InsecureSSLSkipVerify": true,
+  "MetricPrefix": ""
+}

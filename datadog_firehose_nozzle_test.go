@@ -4,9 +4,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
-	"net/http/httptest"
 	"os/exec"
-	"strings"
 	"time"
 
 	"github.com/cloudfoundry/noaa/events"
@@ -25,8 +23,8 @@ var (
 
 var _ = Describe("DatadogFirehoseNozzle", func() {
 	var (
-		fakeFirehose *httptest.Server
-		fakeDatadog  *httptest.Server
+		fakeFirehose *http.Server
+		fakeDatadog  *http.Server
 
 		nozzleSession *gexec.Session
 	)
@@ -35,14 +33,20 @@ var _ = Describe("DatadogFirehoseNozzle", func() {
 		fakeFirehoseInputChan = make(chan *events.Envelope)
 		fakeDDChan = make(chan []byte)
 
-		fakeFirehose = httptest.NewServer(http.HandlerFunc(fakeFirehoseHandler))
-		fakeDatadog = httptest.NewServer(http.HandlerFunc(fakeDatadogHandler))
+		fakeFirehose = &http.Server{
+			Addr:    ":8086",
+			Handler: http.HandlerFunc(fakeFirehoseHandler),
+		}
+		fakeDatadog = &http.Server{
+			Addr:    ":8087",
+			Handler: http.HandlerFunc(fakeDatadogHandler),
+		}
 
-		httpFirehoseURL := fakeFirehose.URL
-		wsFirehoseURL := strings.Replace(httpFirehoseURL, "http", "ws", -1)
+		go fakeFirehose.ListenAndServe()
+		go fakeDatadog.ListenAndServe()
 
 		var err error
-		nozzleCommand := exec.Command(pathToNozzleExecutable, wsFirehoseURL, "token", fakeDatadog.URL, "apiKey", "1")
+		nozzleCommand := exec.Command(pathToNozzleExecutable, "-config", "fixtures/test-config.json", "-token", "some-token")
 		nozzleSession, err = gexec.Start(
 			nozzleCommand,
 			gexec.NewPrefixedWriter("[o][nozzle] ", GinkgoWriter),
@@ -53,14 +57,12 @@ var _ = Describe("DatadogFirehoseNozzle", func() {
 
 	AfterEach(func() {
 		nozzleSession.Kill().Wait()
-		fakeFirehose.Close()
-		fakeDatadog.Close()
 	})
 
 	It("forwards metrics in a batch", func(done Done) {
 		fakeFirehoseInputChan <- &events.Envelope{
 			Origin:    proto.String("origin"),
-			Timestamp: proto.Int64(1),
+			Timestamp: proto.Int64(1000000000),
 			EventType: events.Envelope_ValueMetric.Enum(),
 			ValueMetric: &events.ValueMetric{
 				Name:  proto.String("metricName"),
@@ -75,7 +77,7 @@ var _ = Describe("DatadogFirehoseNozzle", func() {
 
 		fakeFirehoseInputChan <- &events.Envelope{
 			Origin:    proto.String("origin"),
-			Timestamp: proto.Int64(2),
+			Timestamp: proto.Int64(2000000000),
 			EventType: events.Envelope_ValueMetric.Enum(),
 			ValueMetric: &events.ValueMetric{
 				Name:  proto.String("metricName"),
@@ -90,7 +92,7 @@ var _ = Describe("DatadogFirehoseNozzle", func() {
 
 		fakeFirehoseInputChan <- &events.Envelope{
 			Origin:    proto.String("origin"),
-			Timestamp: proto.Int64(3),
+			Timestamp: proto.Int64(3000000000),
 			EventType: events.Envelope_CounterEvent.Enum(),
 			CounterEvent: &events.CounterEvent{
 				Name:  proto.String("counterName"),

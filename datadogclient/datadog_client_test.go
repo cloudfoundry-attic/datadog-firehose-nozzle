@@ -26,11 +26,11 @@ var _ = Describe("DatadogClient", func() {
 	})
 
 	It("posts ValueMetrics in JSON format", func() {
-		c := datadogclient.New(ts.URL, "dummykey")
+		c := datadogclient.New(ts.URL, "dummykey", "")
 
 		c.AddMetric(&events.Envelope{
 			Origin:    proto.String("origin"),
-			Timestamp: proto.Int64(1),
+			Timestamp: proto.Int64(1000000000),
 			EventType: events.Envelope_ValueMetric.Enum(),
 			ValueMetric: &events.ValueMetric{
 				Name:  proto.String("metricName"),
@@ -44,7 +44,7 @@ var _ = Describe("DatadogClient", func() {
 
 		c.AddMetric(&events.Envelope{
 			Origin:    proto.String("origin"),
-			Timestamp: proto.Int64(2),
+			Timestamp: proto.Int64(2000000000),
 			EventType: events.Envelope_ValueMetric.Enum(),
 			ValueMetric: &events.ValueMetric{
 				Name:  proto.String("metricName"),
@@ -69,11 +69,11 @@ var _ = Describe("DatadogClient", func() {
 	})
 
 	It("registers metrics with the same name but different tags as different", func() {
-		c := datadogclient.New(ts.URL, "dummykey")
+		c := datadogclient.New(ts.URL, "dummykey", "")
 
 		c.AddMetric(&events.Envelope{
 			Origin:    proto.String("origin"),
-			Timestamp: proto.Int64(1),
+			Timestamp: proto.Int64(1000000000),
 			EventType: events.Envelope_ValueMetric.Enum(),
 			ValueMetric: &events.ValueMetric{
 				Name:  proto.String("metricName"),
@@ -87,7 +87,7 @@ var _ = Describe("DatadogClient", func() {
 
 		c.AddMetric(&events.Envelope{
 			Origin:    proto.String("origin"),
-			Timestamp: proto.Int64(2),
+			Timestamp: proto.Int64(2000000000),
 			EventType: events.Envelope_ValueMetric.Enum(),
 			ValueMetric: &events.ValueMetric{
 				Name:  proto.String("metricName"),
@@ -110,11 +110,11 @@ var _ = Describe("DatadogClient", func() {
 	})
 
 	It("posts CounterEvents in JSON format and empties map after post", func() {
-		c := datadogclient.New(ts.URL, "dummykey")
+		c := datadogclient.New(ts.URL, "dummykey", "")
 
 		c.AddMetric(&events.Envelope{
 			Origin:    proto.String("origin"),
-			Timestamp: proto.Int64(1),
+			Timestamp: proto.Int64(1000000000),
 			EventType: events.Envelope_CounterEvent.Enum(),
 			CounterEvent: &events.CounterEvent{
 				Name:  proto.String("counterName"),
@@ -125,7 +125,7 @@ var _ = Describe("DatadogClient", func() {
 
 		c.AddMetric(&events.Envelope{
 			Origin:    proto.String("origin"),
-			Timestamp: proto.Int64(2),
+			Timestamp: proto.Int64(2000000000),
 			EventType: events.Envelope_CounterEvent.Enum(),
 			CounterEvent: &events.CounterEvent{
 				Name:  proto.String("counterName"),

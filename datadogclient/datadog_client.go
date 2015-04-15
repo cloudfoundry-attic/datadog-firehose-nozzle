@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	"github.com/cloudfoundry/noaa/events"
-	"time"
 	"log"
+	"time"
 )
 
 const DefaultAPIURL = "https://app.datadoghq.com/api/v1"
@@ -18,13 +18,15 @@ type Client struct {
 	apiURL       string
 	apiKey       string
 	metricPoints map[metricKey]metricValue
+	prefix       string
 }
 
-func New(apiURL string, apiKey string) *Client {
+func New(apiURL string, apiKey string, prefix string) *Client {
 	return &Client{
 		apiURL:       apiURL,
 		apiKey:       apiKey,
 		metricPoints: make(map[metricKey]metricValue),
+		prefix:       prefix,
 	}
 }
 
@@ -72,7 +74,7 @@ func (c *Client) formatMetrics() []byte {
 	metrics := []metric{}
 	for key, mVal := range c.metricPoints {
 		metrics = append(metrics, metric{
-			Metric: "datadogclient." + key.name,
+			Metric: c.prefix + key.name,
 			Points: mVal.points,
 			Type:   "gauge",
 			Tags:   mVal.tags,

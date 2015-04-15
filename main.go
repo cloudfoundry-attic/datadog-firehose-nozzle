@@ -2,34 +2,47 @@ package main
 
 import (
 	"fmt"
-	"os"
 
+	"crypto/tls"
+	"encoding/json"
+	"errors"
+	"flag"
 	"github.com/cloudfoundry-incubator/datadog-firehose-nozzle/datadogclient"
 	"github.com/cloudfoundry/noaa"
 	"github.com/cloudfoundry/noaa/events"
-	"time"
-	"strconv"
-	"crypto/tls"
+	"io/ioutil"
 	"log"
+	"time"
 )
 
+type nozzleConfig struct {
+	TrafficControllerURL  string
+	DataDogURL            string
+	DataDogAPIKey         string
+	FlushDurationSeconds  uint32
+	InsecureSSLSkipVerify bool
+	MetricPrefix          string
+}
+
 func main() {
-	if len(os.Args) != 6 {
-		fmt.Printf("Usage: %s <traffic controller url> <oauth token> <datadog url> <datadog api key> <flush duration (s)>", os.Args[0])
-		return
-	}
+	var (
+		configFilePath = flag.String("config", "config/datadog-firehose-nozzle.json", "Location of the nozzle config json file")
+		oauthToken     = flag.String("token", "", "OAuth token to access the firehose")
+	)
+	flag.Parse()
+	config, err := parseConfig(*configFilePath)
 
-	trafficControllerURL := os.Args[1]
-	authToken := os.Args[2]
-	dataDogURL := os.Args[3]
-	dataDogApiKey := os.Args[4]
-	flushDuration, err := strconv.Atoi(os.Args[5])
 	if err != nil {
-		fmt.Printf("Illegal value for flush duration: %s\n", os.Args[5])
-		return
+		log.Fatalf("Error parsing config: %s", err.Error())
 	}
 
-	consumer := noaa.NewConsumer(trafficControllerURL, &tls.Config{InsecureSkipVerify: true}, nil)
+	trafficControllerURL := config.TrafficControllerURL
+	authToken := *oauthToken
+	dataDogURL := config.DataDogURL
+	dataDogApiKey := config.DataDogAPIKey
+	flushDuration := config.FlushDurationSeconds
+
+	consumer := noaa.NewConsumer(trafficControllerURL, &tls.Config{InsecureSkipVerify: config.InsecureSSLSkipVerify}, nil)
 	messages := make(chan *events.Envelope)
 	errs := make(chan error)
 	done := make(chan struct{})
@@ -37,10 +50,10 @@ func main() {
 
 	go func() {
 		err := <-errs
-		fmt.Printf("Error while reading from the firehose: %s", err.Error())
+		log.Printf("Error while reading from the firehose: %s", err.Error())
 	}()
 
-	client := datadogclient.New(dataDogURL, dataDogApiKey)
+	client := datadogclient.New(dataDogURL, dataDogApiKey, config.MetricPrefix)
 	ticker := time.NewTicker(time.Duration(flushDuration) * time.Second)
 
 	go func() {
@@ -62,4 +75,18 @@ func main() {
 	}
 
 	close(done)
+}
+
+func parseConfig(configPath string) (nozzleConfig, error) {
+	configBytes, err := ioutil.ReadFile(configPath)
+	var config nozzleConfig
+	if err != nil {
+		return config, errors.New(fmt.Sprintf("Can not read config file [%s]: %s", configPath, err))
+	}
+
+	err = json.Unmarshal(configBytes, &config)
+	if err != nil {
+		return config, errors.New(fmt.Sprintf("Can not parse config file %s: %s", configPath, err))
+	}
+	return config, err
 }
