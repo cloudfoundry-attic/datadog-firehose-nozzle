@@ -39,7 +39,7 @@ func main() {
 	trafficControllerURL := config.TrafficControllerURL
 	authToken := *oauthToken
 	dataDogURL := config.DataDogURL
-	dataDogApiKey := config.DataDogAPIKey
+	dataDogAPIKey := config.DataDogAPIKey
 	flushDuration := config.FlushDurationSeconds
 
 	consumer := noaa.NewConsumer(trafficControllerURL, &tls.Config{InsecureSkipVerify: config.InsecureSSLSkipVerify}, nil)
@@ -54,7 +54,7 @@ func main() {
 		close(done)
 	}()
 
-	client := datadogclient.New(dataDogURL, dataDogApiKey, config.MetricPrefix)
+	client := datadogclient.New(dataDogURL, dataDogAPIKey, config.MetricPrefix)
 	ticker := time.NewTicker(time.Duration(flushDuration) * time.Second)
 
 	for {
@@ -64,23 +64,22 @@ func main() {
 		case envelope := <-messages:
 			client.AddMetric(envelope)
 		case <-done:
+			postMetrics(client)
 			break
 		}
 	}
-
-	postMetrics(client)
 }
 
 func parseConfig(configPath string) (nozzleConfig, error) {
 	configBytes, err := ioutil.ReadFile(configPath)
 	var config nozzleConfig
 	if err != nil {
-		return config, errors.New(fmt.Sprintf("Can not read config file [%s]: %s", configPath, err))
+		return config, fmt.Errorf("Can not read config file [%s]: %s", configPath, err)
 	}
 
 	err = json.Unmarshal(configBytes, &config)
 	if err != nil {
-		return config, errors.New(fmt.Sprintf("Can not parse config file %s: %s", configPath, err))
+		return config, fmt.Errorf("Can not parse config file %s: %s", configPath, err)
 	}
 	return config, err
 }
