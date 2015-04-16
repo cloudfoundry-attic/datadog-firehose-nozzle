@@ -5,7 +5,6 @@ import (
 
 	"crypto/tls"
 	"encoding/json"
-	"errors"
 	"flag"
 	"github.com/cloudfoundry-incubator/datadog-firehose-nozzle/datadogclient"
 	"github.com/cloudfoundry/noaa"
