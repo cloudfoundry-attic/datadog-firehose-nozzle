@@ -19,7 +19,7 @@ before_install:
 - go get -v github.com/onsi/gomega
 - go install -v github.com/onsi/ginkgo/ginkgo
 
-script: PATH=$HOME/gopath/bin:$PATH ginkgo -r -race -cover
+script: PATH=$HOME/gopath/bin:$PATH bin/test
 
 after_success:
 - 'echo "mode: set" > all.coverprofile'
