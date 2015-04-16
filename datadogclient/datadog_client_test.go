@@ -36,10 +36,8 @@ var _ = Describe("DatadogClient", func() {
 				Name:  proto.String("metricName"),
 				Value: proto.Float64(5),
 			},
-			Tags: []*events.Tag{
-				{Key: proto.String("deployment"), Value: proto.String("deployment-name")},
-				{Key: proto.String("job"), Value: proto.String("doppler")},
-			},
+			Deployment: proto.String("deployment-name"),
+			Job:        proto.String("doppler"),
 		})
 
 		c.AddMetric(&events.Envelope{
@@ -50,10 +48,8 @@ var _ = Describe("DatadogClient", func() {
 				Name:  proto.String("metricName"),
 				Value: proto.Float64(76),
 			},
-			Tags: []*events.Tag{
-				{Key: proto.String("deployment"), Value: proto.String("deployment-name")},
-				{Key: proto.String("job"), Value: proto.String("doppler")},
-			},
+			Deployment: proto.String("deployment-name"),
+			Job:        proto.String("doppler"),
 		})
 
 		err := c.PostMetrics()
@@ -79,10 +75,8 @@ var _ = Describe("DatadogClient", func() {
 				Name:  proto.String("metricName"),
 				Value: proto.Float64(5),
 			},
-			Tags: []*events.Tag{
-				{Key: proto.String("deployment"), Value: proto.String("deployment-name")},
-				{Key: proto.String("job"), Value: proto.String("doppler")},
-			},
+			Deployment: proto.String("deployment-name"),
+			Job:        proto.String("doppler"),
 		})
 
 		c.AddMetric(&events.Envelope{
@@ -93,10 +87,8 @@ var _ = Describe("DatadogClient", func() {
 				Name:  proto.String("metricName"),
 				Value: proto.Float64(76),
 			},
-			Tags: []*events.Tag{
-				{Key: proto.String("deployment"), Value: proto.String("deployment-name")},
-				{Key: proto.String("job"), Value: proto.String("gorouter")},
-			},
+			Deployment: proto.String("deployment-name"),
+			Job:        proto.String("gorouter"),
 		})
 
 		err := c.PostMetrics()

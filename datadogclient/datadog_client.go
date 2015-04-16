@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/cloudfoundry/noaa/events"
 	"log"
@@ -31,7 +30,14 @@ func New(apiURL string, apiKey string, prefix string) *Client {
 }
 
 func (c *Client) AddMetric(envelope *events.Envelope) {
-	key := metricKey{eventType: envelope.GetEventType(), name: getName(envelope), tagsKey: getTagsKey(envelope)}
+	key := metricKey{
+		eventType:  envelope.GetEventType(),
+		name:       getName(envelope),
+		deployment: envelope.GetDeployment(),
+		job:        envelope.GetJob(),
+		index:      envelope.GetIndex(),
+		ip:         envelope.GetIp(),
+	}
 
 	mVal := c.metricPoints[key]
 	value := getValue(envelope)
@@ -87,9 +93,12 @@ func (c *Client) formatMetrics() []byte {
 }
 
 type metricKey struct {
-	eventType events.Envelope_EventType
-	name      string
-	tagsKey   string
+	eventType  events.Envelope_EventType
+	name       string
+	deployment string
+	job        string
+	index      string
+	ip         string
 }
 
 type metricValue struct {
@@ -119,17 +128,21 @@ func getValue(envelope *events.Envelope) float64 {
 	}
 }
 
-func getTagsKey(envelope *events.Envelope) string {
-	return strings.Join(getTags(envelope), ",")
-}
-
 func getTags(envelope *events.Envelope) []string {
 	var tags []string
 
-	for _, tag := range envelope.GetTags() {
-		tags = append(tags, fmt.Sprintf("%s:%s", tag.GetKey(), tag.GetValue()))
-	}
+	tags = appendTagIfNotEmpty(tags, "deployment", envelope.GetDeployment())
+	tags = appendTagIfNotEmpty(tags, "job", envelope.GetJob())
+	tags = appendTagIfNotEmpty(tags, "index", envelope.GetIndex())
+	tags = appendTagIfNotEmpty(tags, "ip", envelope.GetIp())
 
+	return tags
+}
+
+func appendTagIfNotEmpty(tags []string, key string, value string) []string {
+	if value != "" {
+		tags = append(tags, fmt.Sprintf("%s:%s", key, value))
+	}
 	return tags
 }
 

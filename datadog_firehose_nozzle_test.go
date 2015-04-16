@@ -69,10 +69,8 @@ var _ = Describe("DatadogFirehoseNozzle", func() {
 				Value: proto.Float64(5),
 				Unit:  proto.String("gauge"),
 			},
-			Tags: []*events.Tag{
-				{Key: proto.String("deployment"), Value: proto.String("deployment-name")},
-				{Key: proto.String("job"), Value: proto.String("doppler")},
-			},
+			Deployment: proto.String("deployment-name"),
+			Job:        proto.String("doppler"),
 		}
 
 		fakeFirehoseInputChan <- &events.Envelope{
@@ -84,10 +82,8 @@ var _ = Describe("DatadogFirehoseNozzle", func() {
 				Value: proto.Float64(10),
 				Unit:  proto.String("gauge"),
 			},
-			Tags: []*events.Tag{
-				{Key: proto.String("deployment"), Value: proto.String("deployment-name")},
-				{Key: proto.String("job"), Value: proto.String("gorouter")},
-			},
+			Deployment: proto.String("deployment-name"),
+			Job:        proto.String("gorouter"),
 		}
 
 		fakeFirehoseInputChan <- &events.Envelope{
@@ -99,10 +95,8 @@ var _ = Describe("DatadogFirehoseNozzle", func() {
 				Delta: proto.Uint64(3),
 				Total: proto.Uint64(15),
 			},
-			Tags: []*events.Tag{
-				{Key: proto.String("deployment"), Value: proto.String("deployment-name")},
-				{Key: proto.String("job"), Value: proto.String("doppler")},
-			},
+			Deployment: proto.String("deployment-name"),
+			Job:        proto.String("doppler"),
 		}
 
 		close(fakeFirehoseInputChan)
