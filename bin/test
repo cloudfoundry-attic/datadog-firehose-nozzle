@@ -1,0 +1,5 @@
+#!/bin/bash -e
+
+go vet ./...
+ginkgo -r --race --randomizeAllSpecs --failOnPending --cover
+golint
