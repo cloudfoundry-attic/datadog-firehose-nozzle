@@ -51,30 +51,24 @@ func main() {
 	go func() {
 		err := <-errs
 		log.Printf("Error while reading from the firehose: %s", err.Error())
+		close(done)
 	}()
 
 	client := datadogclient.New(dataDogURL, dataDogApiKey, config.MetricPrefix)
 	ticker := time.NewTicker(time.Duration(flushDuration) * time.Second)
 
-	go func() {
-		for {
-			select {
-			case <-ticker.C:
-				err := client.PostMetrics()
-				if err != nil {
-					log.Printf("Error: %s", err.Error())
-				}
-			case <-done:
-				return
-			}
+	for {
+		select {
+		case <-ticker.C:
+			postMetrics(client)
+		case envelope := <-messages:
+			client.AddMetric(envelope)
+		case <-done:
+			break
 		}
-	}()
-
-	for envelope := range messages {
-		client.AddMetric(envelope)
 	}
 
-	close(done)
+	postMetrics(client)
 }
 
 func parseConfig(configPath string) (nozzleConfig, error) {
@@ -89,4 +83,11 @@ func parseConfig(configPath string) (nozzleConfig, error) {
 		return config, errors.New(fmt.Sprintf("Can not parse config file %s: %s", configPath, err))
 	}
 	return config, err
+}
+
+func postMetrics(client *datadogclient.Client) {
+	err := client.PostMetrics()
+	if err != nil {
+		log.Printf("Error: %s", err.Error())
+	}
 }
