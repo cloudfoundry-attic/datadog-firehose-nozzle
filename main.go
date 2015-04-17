@@ -64,7 +64,7 @@ func main() {
 			client.AddMetric(envelope)
 		case <-done:
 			postMetrics(client)
-			break
+			return
 		}
 	}
 }
