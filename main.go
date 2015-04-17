@@ -7,14 +7,19 @@ import (
 	"encoding/json"
 	"flag"
 	"github.com/cloudfoundry-incubator/datadog-firehose-nozzle/datadogclient"
+	"github.com/cloudfoundry-incubator/uaago"
 	"github.com/cloudfoundry/noaa"
 	"github.com/cloudfoundry/noaa/events"
+
 	"io/ioutil"
 	"log"
 	"time"
 )
 
 type nozzleConfig struct {
+	UAAURL                string
+	Username              string
+	Password              string
 	TrafficControllerURL  string
 	DataDogURL            string
 	DataDogAPIKey         string
@@ -26,7 +31,6 @@ type nozzleConfig struct {
 func main() {
 	var (
 		configFilePath = flag.String("config", "config/datadog-firehose-nozzle.json", "Location of the nozzle config json file")
-		oauthToken     = flag.String("token", "", "OAuth token to access the firehose")
 	)
 	flag.Parse()
 	config, err := parseConfig(*configFilePath)
@@ -36,10 +40,15 @@ func main() {
 	}
 
 	trafficControllerURL := config.TrafficControllerURL
-	authToken := *oauthToken
 	dataDogURL := config.DataDogURL
 	dataDogAPIKey := config.DataDogAPIKey
 	flushDuration := config.FlushDurationSeconds
+
+	uaaClient := uaago.NewClient(config.UAAURL)
+	authToken, err := uaaClient.GetAuthToken(config.Username, config.Password, config.InsecureSSLSkipVerify)
+	if err != nil {
+		log.Fatalf("Error getting oauth token: %s. Please check your username and password.", err.Error())
+	}
 
 	consumer := noaa.NewConsumer(trafficControllerURL, &tls.Config{InsecureSkipVerify: config.InsecureSSLSkipVerify}, nil)
 	messages := make(chan *events.Envelope)

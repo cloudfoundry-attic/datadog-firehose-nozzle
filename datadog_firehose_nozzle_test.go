@@ -14,6 +14,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
+	"log"
 )
 
 var (
@@ -23,6 +24,7 @@ var (
 
 var _ = Describe("DatadogFirehoseNozzle", func() {
 	var (
+		fakeUAA      *http.Server
 		fakeFirehose *http.Server
 		fakeDatadog  *http.Server
 
@@ -33,6 +35,10 @@ var _ = Describe("DatadogFirehoseNozzle", func() {
 		fakeFirehoseInputChan = make(chan *events.Envelope)
 		fakeDDChan = make(chan []byte)
 
+		fakeUAA = &http.Server{
+			Addr:    ":8084",
+			Handler: http.HandlerFunc(fakeUAAHandler),
+		}
 		fakeFirehose = &http.Server{
 			Addr:    ":8086",
 			Handler: http.HandlerFunc(fakeFirehoseHandler),
@@ -42,11 +48,12 @@ var _ = Describe("DatadogFirehoseNozzle", func() {
 			Handler: http.HandlerFunc(fakeDatadogHandler),
 		}
 
+		go fakeUAA.ListenAndServe()
 		go fakeFirehose.ListenAndServe()
 		go fakeDatadog.ListenAndServe()
 
 		var err error
-		nozzleCommand := exec.Command(pathToNozzleExecutable, "-config", "fixtures/test-config.json", "-token", "some-token")
+		nozzleCommand := exec.Command(pathToNozzleExecutable, "-config", "fixtures/test-config.json")
 		nozzleSession, err = gexec.Start(
 			nozzleCommand,
 			gexec.NewPrefixedWriter("[o][nozzle] ", GinkgoWriter),
@@ -142,8 +149,26 @@ var _ = Describe("DatadogFirehoseNozzle", func() {
 	}, 2.0)
 })
 
+func fakeUAAHandler(rw http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+	rw.Write([]byte(`
+		{
+			"token_type": "bearer",
+			"access_token": "good-token"
+		}
+	`))
+}
+
 func fakeFirehoseHandler(rw http.ResponseWriter, r *http.Request) {
 	defer GinkgoRecover()
+	authorization := r.Header.Get("Authorization")
+
+	if authorization != "bearer good-token" {
+		log.Printf("Bad token passed to firehose: %s", authorization)
+		rw.WriteHeader(403)
+		r.Body.Close()
+		return
+	}
 
 	upgrader := websocket.Upgrader{
 		CheckOrigin: func(*http.Request) bool { return true },

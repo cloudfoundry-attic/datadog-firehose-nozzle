@@ -1,5 +1,7 @@
 {
   "TrafficControllerURL": "wss://doppler.walnut.cf-app.com:4443",
+  "Username": "user",
+  "Password": "user_password",
   "DataDogURL": "https://app.datadoghq.com/api/v1/series",
   "DataDogAPIKey": "<enter api key>",
   "FlushDurationSeconds": 15,
