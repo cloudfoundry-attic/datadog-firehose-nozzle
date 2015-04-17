@@ -1,6 +1,9 @@
 {
   "UAAURL": "http://localhost:8084",
+  "Username": "UAA-username",
+  "Password": "UAA-password",
   "TrafficControllerURL": "ws://localhost:8086",
+  "FirehoseSubscriptionID": "datadog-nozzle",
   "DataDogURL": "http://localhost:8087",
   "DataDogAPIKey": "some-key",
   "FlushDurationSeconds": 1,

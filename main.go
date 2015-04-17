@@ -17,15 +17,16 @@ import (
 )
 
 type nozzleConfig struct {
-	UAAURL                string
-	Username              string
-	Password              string
-	TrafficControllerURL  string
-	DataDogURL            string
-	DataDogAPIKey         string
-	FlushDurationSeconds  uint32
-	InsecureSSLSkipVerify bool
-	MetricPrefix          string
+	UAAURL                 string
+	Username               string
+	Password               string
+	TrafficControllerURL   string
+	FirehoseSubscriptionID string
+	DataDogURL             string
+	DataDogAPIKey          string
+	FlushDurationSeconds   uint32
+	InsecureSSLSkipVerify  bool
+	MetricPrefix           string
 }
 
 func main() {
@@ -39,22 +40,20 @@ func main() {
 		log.Fatalf("Error parsing config: %s", err.Error())
 	}
 
-	trafficControllerURL := config.TrafficControllerURL
-	dataDogURL := config.DataDogURL
-	dataDogAPIKey := config.DataDogAPIKey
-	flushDuration := config.FlushDurationSeconds
-
 	uaaClient := uaago.NewClient(config.UAAURL)
 	authToken, err := uaaClient.GetAuthToken(config.Username, config.Password, config.InsecureSSLSkipVerify)
 	if err != nil {
 		log.Fatalf("Error getting oauth token: %s. Please check your username and password.", err.Error())
 	}
 
-	consumer := noaa.NewConsumer(trafficControllerURL, &tls.Config{InsecureSkipVerify: config.InsecureSSLSkipVerify}, nil)
+	consumer := noaa.NewConsumer(
+		config.TrafficControllerURL,
+		&tls.Config{InsecureSkipVerify: config.InsecureSSLSkipVerify},
+		nil)
 	messages := make(chan *events.Envelope)
 	errs := make(chan error)
 	done := make(chan struct{})
-	go consumer.Firehose("datadog-nozzle", authToken, messages, errs, done)
+	go consumer.Firehose(config.FirehoseSubscriptionID, authToken, messages, errs, done)
 
 	go func() {
 		err := <-errs
@@ -62,8 +61,8 @@ func main() {
 		close(done)
 	}()
 
-	client := datadogclient.New(dataDogURL, dataDogAPIKey, config.MetricPrefix)
-	ticker := time.NewTicker(time.Duration(flushDuration) * time.Second)
+	client := datadogclient.New(config.DataDogURL, config.DataDogAPIKey, config.MetricPrefix)
+	ticker := time.NewTicker(time.Duration(config.FlushDurationSeconds) * time.Second)
 
 	for {
 		select {
