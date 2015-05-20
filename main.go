@@ -40,7 +40,11 @@ func main() {
 		log.Fatalf("Error parsing config: %s", err.Error())
 	}
 
-	uaaClient := uaago.NewClient(config.UAAURL)
+	uaaClient, err := uaago.NewClient(config.UAAURL)
+	if err != nil {
+		log.Fatalf("Error creating uaa client: %s", err.Error())
+	}
+
 	authToken, err := uaaClient.GetAuthToken(config.Username, config.Password, config.InsecureSSLSkipVerify)
 	if err != nil {
 		log.Fatalf("Error getting oauth token: %s. Please check your username and password.", err.Error())
