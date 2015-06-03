@@ -7,7 +7,7 @@ import (
 
 	"github.com/cloudfoundry-incubator/datadog-firehose-nozzle/datadogclient"
 
-	"github.com/cloudfoundry/noaa/events"
+	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 
 	. "github.com/onsi/ginkgo"

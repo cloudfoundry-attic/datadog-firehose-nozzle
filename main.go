@@ -6,14 +6,14 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"flag"
-	"github.com/cloudfoundry-incubator/datadog-firehose-nozzle/datadogclient"
-	"github.com/cloudfoundry-incubator/uaago"
-	"github.com/cloudfoundry/noaa"
-	"github.com/cloudfoundry/noaa/events"
-
 	"io/ioutil"
 	"log"
 	"time"
+
+	"github.com/cloudfoundry-incubator/datadog-firehose-nozzle/datadogclient"
+	"github.com/cloudfoundry-incubator/uaago"
+	"github.com/cloudfoundry/noaa"
+	"github.com/cloudfoundry/sonde-go/events"
 )
 
 type nozzleConfig struct {

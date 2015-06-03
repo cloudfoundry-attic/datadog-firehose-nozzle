@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"net/http"
-
-	"github.com/cloudfoundry/noaa/events"
 	"log"
+	"net/http"
 	"time"
+
+	"github.com/cloudfoundry/sonde-go/events"
 )
 
 const DefaultAPIURL = "https://app.datadoghq.com/api/v1"
