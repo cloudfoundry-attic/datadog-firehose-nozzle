@@ -30,6 +30,10 @@ func New(apiURL string, apiKey string, prefix string) *Client {
 }
 
 func (c *Client) AddMetric(envelope *events.Envelope) {
+	if envelope.GetEventType() != events.Envelope_ValueMetric && envelope.GetEventType() != events.Envelope_CounterEvent {
+		return
+	}
+
 	key := metricKey{
 		eventType:  envelope.GetEventType(),
 		name:       getName(envelope),

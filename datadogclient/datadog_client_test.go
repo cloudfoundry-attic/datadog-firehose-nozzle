@@ -25,6 +25,42 @@ var _ = Describe("DatadogClient", func() {
 		ts = httptest.NewServer(http.HandlerFunc(handlePost))
 	})
 
+	It("ignores messages that aren't value metrics or counter events", func() {
+		c := datadogclient.New(ts.URL, "dummykey", "datadog.nozzle.")
+
+		c.AddMetric(&events.Envelope{
+			Origin:    proto.String("origin"),
+			Timestamp: proto.Int64(1000000000),
+			EventType: events.Envelope_LogMessage.Enum(),
+			LogMessage: &events.LogMessage{
+				Message:     []byte("log message"),
+				MessageType: events.LogMessage_OUT.Enum(),
+				Timestamp:   proto.Int64(1000000000),
+			},
+			Deployment: proto.String("deployment-name"),
+			Job:        proto.String("doppler"),
+		})
+
+		c.AddMetric(&events.Envelope{
+			Origin:    proto.String("origin"),
+			Timestamp: proto.Int64(1000000000),
+			EventType: events.Envelope_ContainerMetric.Enum(),
+			ContainerMetric: &events.ContainerMetric{
+				ApplicationId: proto.String("app-id"),
+				InstanceIndex: proto.Int32(4),
+				CpuPercentage: proto.Float64(20.0),
+				MemoryBytes:   proto.Uint64(19939949),
+				DiskBytes:     proto.Uint64(29488929),
+			},
+			Deployment: proto.String("deployment-name"),
+			Job:        proto.String("doppler"),
+		})
+
+		err := c.PostMetrics()
+		Expect(err).ToNot(HaveOccurred())
+		Eventually(bodyChan).Should(Receive(MatchJSON(`{"series":[]}`)))
+	})
+
 	It("posts ValueMetrics in JSON format", func() {
 		c := datadogclient.New(ts.URL, "dummykey", "")
 
