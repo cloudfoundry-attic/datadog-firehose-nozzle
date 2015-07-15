@@ -14,6 +14,7 @@ import (
 	"github.com/cloudfoundry-incubator/uaago"
 	"github.com/cloudfoundry/noaa"
 	"github.com/cloudfoundry/sonde-go/events"
+	"github.com/pivotal-golang/localip"
 )
 
 type nozzleConfig struct {
@@ -65,7 +66,12 @@ func main() {
 		close(done)
 	}()
 
-	client := datadogclient.New(config.DataDogURL, config.DataDogAPIKey, config.MetricPrefix)
+	ipAddress, err := localip.LocalIP()
+	if err != nil {
+		panic(err)
+	}
+
+	client := datadogclient.New(config.DataDogURL, config.DataDogAPIKey, config.MetricPrefix, ipAddress)
 	ticker := time.NewTicker(time.Duration(config.FlushDurationSeconds) * time.Second)
 
 	for {

@@ -8,28 +8,65 @@ import (
 	"net/http"
 	"time"
 
+	"errors"
 	"github.com/cloudfoundry/sonde-go/events"
+	"sync/atomic"
 )
 
 const DefaultAPIURL = "https://app.datadoghq.com/api/v1"
 
 type Client struct {
-	apiURL       string
-	apiKey       string
-	metricPoints map[metricKey]metricValue
-	prefix       string
+	apiURL               string
+	apiKey               string
+	metricPoints         map[metricKey]metricValue
+	prefix               string
+	ip                   string
+	totalMessageReceived uint64
 }
 
-func New(apiURL string, apiKey string, prefix string) *Client {
+type metricKey struct {
+	eventType  events.Envelope_EventType
+	name       string
+	deployment string
+	job        string
+	index      string
+	ip         string
+}
+
+type metricValue struct {
+	tags   []string
+	points []Point
+}
+
+type Payload struct {
+	Series []Metric `json:"series"`
+}
+
+type Metric struct {
+	Metric string   `json:"metric"`
+	Points []Point  `json:"points"`
+	Type   string   `json:"type"`
+	Host   string   `json:"host,omitempty"`
+	Tags   []string `json:"tags,omitempty"`
+}
+
+type Point struct {
+	Timestamp int64
+	Value     float64
+}
+
+func New(apiURL string, apiKey string, prefix string, ip string) *Client {
 	return &Client{
 		apiURL:       apiURL,
 		apiKey:       apiKey,
 		metricPoints: make(map[metricKey]metricValue),
 		prefix:       prefix,
+		ip:           ip,
 	}
 }
 
 func (c *Client) AddMetric(envelope *events.Envelope) {
+	atomic.AddUint64(&c.totalMessageReceived, 1)
 	if envelope.GetEventType() != events.Envelope_ValueMetric && envelope.GetEventType() != events.Envelope_CounterEvent {
 		return
 	}
@@ -47,9 +84,9 @@ func (c *Client) AddMetric(envelope *events.Envelope) {
 	value := getValue(envelope)
 
 	mVal.tags = getTags(envelope)
-	mVal.points = append(mVal.points, point{
-		timestamp: envelope.GetTimestamp() / int64(time.Second),
-		value:     value,
+	mVal.points = append(mVal.points, Point{
+		Timestamp: envelope.GetTimestamp() / int64(time.Second),
+		Value:     value,
 	})
 
 	c.metricPoints[key] = mVal
@@ -81,9 +118,9 @@ func (c *Client) seriesURL() string {
 }
 
 func (c *Client) formatMetrics() []byte {
-	metrics := []metric{}
+	metrics := []Metric{}
 	for key, mVal := range c.metricPoints {
-		metrics = append(metrics, metric{
+		metrics = append(metrics, Metric{
 			Metric: c.prefix + key.name,
 			Points: mVal.points,
 			Type:   "gauge",
@@ -91,23 +128,21 @@ func (c *Client) formatMetrics() []byte {
 		})
 	}
 
-	encodedMetric, _ := json.Marshal(payload{Series: metrics})
+	metrics = append(metrics, Metric{
+		Metric: c.prefix + "totalMessagesReceived",
+		Points: []Point{
+			Point{
+				Timestamp: time.Now().Unix(),
+				Value:     float64(atomic.LoadUint64(&c.totalMessageReceived)),
+			},
+		},
+		Type: "gauge",
+		Tags: []string{fmt.Sprintf("ip:%s", c.ip)},
+	})
+
+	encodedMetric, _ := json.Marshal(Payload{Series: metrics})
 
 	return encodedMetric
-}
-
-type metricKey struct {
-	eventType  events.Envelope_EventType
-	name       string
-	deployment string
-	job        string
-	index      string
-	ip         string
-}
-
-type metricValue struct {
-	tags   []string
-	points []point
 }
 
 func getName(envelope *events.Envelope) string {
@@ -117,7 +152,7 @@ func getName(envelope *events.Envelope) string {
 	case events.Envelope_CounterEvent:
 		return envelope.GetOrigin() + "." + envelope.GetCounterEvent().GetName()
 	default:
-		return ""
+		panic("Unknown event type")
 	}
 }
 
@@ -128,7 +163,7 @@ func getValue(envelope *events.Envelope) float64 {
 	case events.Envelope_CounterEvent:
 		return float64(envelope.GetCounterEvent().GetTotal())
 	default:
-		return 0
+		panic("Unknown event type")
 	}
 }
 
@@ -150,23 +185,24 @@ func appendTagIfNotEmpty(tags []string, key string, value string) []string {
 	return tags
 }
 
-type point struct {
-	timestamp int64
-	value     float64
+func (p Point) MarshalJSON() ([]byte, error) {
+	return []byte(fmt.Sprintf(`[%d, %f]`, p.Timestamp, p.Value)), nil
 }
 
-func (p point) MarshalJSON() ([]byte, error) {
-	return []byte(fmt.Sprintf(`[%d, %f]`, p.timestamp, p.value)), nil
-}
+func (p *Point) UnmarshalJSON(in []byte) error {
+	var timestamp int64
+	var value float64
 
-type metric struct {
-	Metric string   `json:"metric"`
-	Points []point  `json:"points"`
-	Type   string   `json:"type"`
-	Host   string   `json:"host,omitempty"`
-	Tags   []string `json:"tags,omitempty"`
-}
+	parsed, err := fmt.Sscanf(string(in), `[%d,%f]`, &timestamp, &value)
+	if err != nil {
+		return err
+	}
+	if parsed != 2 {
+		return errors.New("expected two parsed values")
+	}
 
-type payload struct {
-	Series []metric `json:"series"`
+	p.Timestamp = timestamp
+	p.Value = value
+
+	return nil
 }

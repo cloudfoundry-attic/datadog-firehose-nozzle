@@ -10,23 +10,25 @@ import (
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 
+	"encoding/json"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"time"
 )
 
-var bodyChan chan []byte
+var bodies [][]byte
 
 var _ = Describe("DatadogClient", func() {
 
 	var ts *httptest.Server
 
 	BeforeEach(func() {
-		bodyChan = make(chan []byte, 1)
+		bodies = nil
 		ts = httptest.NewServer(http.HandlerFunc(handlePost))
 	})
 
 	It("ignores messages that aren't value metrics or counter events", func() {
-		c := datadogclient.New(ts.URL, "dummykey", "datadog.nozzle.")
+		c := datadogclient.New(ts.URL, "dummykey", "datadog.nozzle.", "dummy-ip")
 
 		c.AddMetric(&events.Envelope{
 			Origin:    proto.String("origin"),
@@ -58,11 +60,18 @@ var _ = Describe("DatadogClient", func() {
 
 		err := c.PostMetrics()
 		Expect(err).ToNot(HaveOccurred())
-		Eventually(bodyChan).Should(Receive(MatchJSON(`{"series":[]}`)))
+
+		Eventually(bodies).Should(HaveLen(1))
+		var payload datadogclient.Payload
+		err = json.Unmarshal(bodies[0], &payload)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(payload.Series).To(HaveLen(1))
+
+		validateMetrics(payload, 2)
 	})
 
 	It("posts ValueMetrics in JSON format", func() {
-		c := datadogclient.New(ts.URL, "dummykey", "")
+		c := datadogclient.New(ts.URL, "dummykey", "datadog.nozzle.", "dummy-ip")
 
 		c.AddMetric(&events.Envelope{
 			Origin:    proto.String("origin"),
@@ -90,18 +99,40 @@ var _ = Describe("DatadogClient", func() {
 
 		err := c.PostMetrics()
 		Expect(err).ToNot(HaveOccurred())
-		Eventually(bodyChan).Should(Receive(MatchJSON(`{
-		"series":[
-			{"metric":"origin.metricName",
 
-				"points":[[1,5], [2,76]],
-				"type":"gauge",
-				"tags":["deployment:deployment-name", "job:doppler"]}
-		]}`)))
+		Eventually(bodies).Should(HaveLen(1))
+
+		var payload datadogclient.Payload
+		err = json.Unmarshal(bodies[0], &payload)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(payload.Series).To(HaveLen(2))
+
+		metricFound := false
+		for _, metric := range payload.Series {
+			Expect(metric.Type).To(Equal("gauge"))
+
+			if metric.Metric == "datadog.nozzle.origin.metricName" {
+				metricFound = true
+				Expect(metric.Points).To(Equal([]datadogclient.Point{
+					datadogclient.Point{
+						Timestamp: 1,
+						Value:     5.0,
+					},
+					datadogclient.Point{
+						Timestamp: 2,
+						Value:     76.0,
+					},
+				}))
+				Expect(metric.Tags).To(Equal([]string{"deployment:deployment-name", "job:doppler"}))
+			}
+		}
+		Expect(metricFound).To(BeTrue())
+
+		validateMetrics(payload, 2)
 	})
 
 	It("registers metrics with the same name but different tags as different", func() {
-		c := datadogclient.New(ts.URL, "dummykey", "")
+		c := datadogclient.New(ts.URL, "dummykey", "datadog.nozzle.", "dummy-ip")
 
 		c.AddMetric(&events.Envelope{
 			Origin:    proto.String("origin"),
@@ -130,15 +161,48 @@ var _ = Describe("DatadogClient", func() {
 		err := c.PostMetrics()
 		Expect(err).ToNot(HaveOccurred())
 
-		var receivedBytes []byte
-		Eventually(bodyChan).Should(Receive(&receivedBytes))
+		Eventually(bodies).Should(HaveLen(1))
 
-		Expect(receivedBytes).To(ContainSubstring(`["deployment:deployment-name","job:doppler"]`))
-		Expect(receivedBytes).To(ContainSubstring(`["deployment:deployment-name","job:gorouter"]`))
+		var payload datadogclient.Payload
+		err = json.Unmarshal(bodies[0], &payload)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(payload.Series).To(HaveLen(3))
+		dopplerFound := false
+		gorouterFound := false
+		for _, metric := range payload.Series {
+			Expect(metric.Type).To(Equal("gauge"))
+
+			if metric.Metric == "datadog.nozzle.origin.metricName" {
+				Expect(metric.Tags).To(HaveLen(2))
+				Expect(metric.Tags[0]).To(Equal("deployment:deployment-name"))
+				if metric.Tags[1] == "job:doppler" {
+					dopplerFound = true
+					Expect(metric.Points).To(Equal([]datadogclient.Point{
+						datadogclient.Point{
+							Timestamp: 1,
+							Value:     5.0,
+						},
+					}))
+				} else if metric.Tags[1] == "job:gorouter" {
+					gorouterFound = true
+					Expect(metric.Points).To(Equal([]datadogclient.Point{
+						datadogclient.Point{
+							Timestamp: 2,
+							Value:     76.0,
+						},
+					}))
+				} else {
+					panic("Unknown tag found")
+				}
+			}
+		}
+		Expect(dopplerFound).To(BeTrue())
+		Expect(gorouterFound).To(BeTrue())
+		validateMetrics(payload, 2)
 	})
 
 	It("posts CounterEvents in JSON format and empties map after post", func() {
-		c := datadogclient.New(ts.URL, "dummykey", "")
+		c := datadogclient.New(ts.URL, "dummykey", "datadog.nozzle.", "dummy-ip")
 
 		c.AddMetric(&events.Envelope{
 			Origin:    proto.String("origin"),
@@ -164,19 +228,62 @@ var _ = Describe("DatadogClient", func() {
 
 		err := c.PostMetrics()
 		Expect(err).ToNot(HaveOccurred())
-		Eventually(bodyChan).Should(Receive(MatchJSON(`{
-		"series":[
-			{"metric":"origin.counterName",
-				"points":[[1,5],[2,11]],
-				"type":"gauge"}
-		]}`)))
+
+		Eventually(bodies).Should(HaveLen(1))
+
+		var payload datadogclient.Payload
+		err = json.Unmarshal(bodies[0], &payload)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(payload.Series).To(HaveLen(2))
+		counterNameFound := false
+		for _, metric := range payload.Series {
+			Expect(metric.Type).To(Equal("gauge"))
+
+			if metric.Metric == "datadog.nozzle.origin.counterName" {
+				counterNameFound = true
+				Expect(metric.Points).To(Equal([]datadogclient.Point{
+					datadogclient.Point{
+						Timestamp: 1,
+						Value:     5.0,
+					},
+					datadogclient.Point{
+						Timestamp: 2,
+						Value:     11.0,
+					},
+				}))
+			}
+		}
+		Expect(counterNameFound).To(BeTrue())
+		validateMetrics(payload, 2)
 
 		err = c.PostMetrics()
 		Expect(err).ToNot(HaveOccurred())
-		Eventually(bodyChan).Should(Receive(MatchJSON(`{"series":[]}`)))
+
+		Eventually(bodies).Should(HaveLen(2))
+
+		err = json.Unmarshal(bodies[1], &payload)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(payload.Series).To(HaveLen(1))
+
+		validateMetrics(payload, 2)
 	})
 
 })
+
+func validateMetrics(payload datadogclient.Payload, totalMessagesReceived int) {
+	totalMessagesReceivedFound := false
+	for _, metric := range payload.Series {
+		Expect(metric.Type).To(Equal("gauge"))
+
+		if metric.Metric == "datadog.nozzle.totalMessagesReceived" {
+			totalMessagesReceivedFound = true
+			Expect(metric.Points).To(HaveLen(1))
+			Expect(metric.Points[0].Timestamp).To(BeNumerically(">", time.Now().Unix()-10), "Timestamp should not be less than 10 seconds ago")
+			Expect(metric.Points[0].Value).To(Equal(float64(totalMessagesReceived)))
+		}
+	}
+	Expect(totalMessagesReceivedFound).To(BeTrue())
+}
 
 func handlePost(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
@@ -185,5 +292,5 @@ func handlePost(w http.ResponseWriter, r *http.Request) {
 		panic("No body!")
 	}
 
-	bodyChan <- body
+	bodies = append(bodies, body)
 }

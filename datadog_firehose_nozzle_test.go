@@ -13,6 +13,7 @@ import (
 
 	"log"
 
+	"github.com/cloudfoundry-incubator/datadog-firehose-nozzle/datadogclient"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
@@ -114,37 +115,54 @@ var _ = Describe("DatadogFirehoseNozzle", func() {
 		Eventually(fakeDDChan, "2s").Should(Receive(&messageBytes))
 
 		// Break JSON blob into a list of blobs, one for each metric
-		var jsonBlob map[string][]interface{}
-
-		err := json.Unmarshal(messageBytes, &jsonBlob)
+		var payload datadogclient.Payload
+		err := json.Unmarshal(messageBytes, &payload)
 		Expect(err).NotTo(HaveOccurred())
-		var series [][]byte
 
-		for _, metric := range jsonBlob["series"] {
-			buffer, _ := json.Marshal(metric)
-			series = append(series, buffer)
+		for _, metric := range payload.Series {
+			Expect(metric.Type).To(Equal("gauge"))
+
+			if metric.Metric == "origin.metricName" {
+				Expect(metric.Tags).To(HaveLen(2))
+				Expect(metric.Tags[0]).To(Equal("deployment:deployment-name"))
+				if metric.Tags[1] == "job:doppler" {
+					Expect(metric.Points).To(Equal([]datadogclient.Point{
+						datadogclient.Point{
+							Timestamp: 1,
+							Value:     5.0,
+						},
+					}))
+				} else if metric.Tags[1] == "job:gorouter" {
+					Expect(metric.Points).To(Equal([]datadogclient.Point{
+						datadogclient.Point{
+							Timestamp: 2,
+							Value:     10.0,
+						},
+					}))
+				} else {
+					panic("Unknown tag")
+				}
+			} else if metric.Metric == "origin.counterName" {
+				Expect(metric.Tags).To(HaveLen(2))
+				Expect(metric.Tags[0]).To(Equal("deployment:deployment-name"))
+				Expect(metric.Tags[1]).To(Equal("job:doppler"))
+
+				Expect(metric.Points).To(Equal([]datadogclient.Point{
+					datadogclient.Point{
+						Timestamp: 3,
+						Value:     15.0,
+					},
+				}))
+			} else if metric.Metric == "totalMessagesReceived" {
+				Expect(metric.Tags).To(HaveLen(1))
+				Expect(metric.Tags[0]).To(HavePrefix("ip:"))
+
+				Expect(metric.Points).To(HaveLen(1))
+				Expect(metric.Points[0].Value).To(Equal(3.0))
+			} else {
+				panic("Unknown metric " + metric.Metric)
+			}
 		}
-
-		Expect(series).To(ConsistOf(
-			MatchJSON(`{
-                "metric":"origin.metricName",
-                "points":[[1,5]],
-                "type":"gauge",
-                "tags":["deployment:deployment-name", "job:doppler"]
-            }`),
-			MatchJSON(`{
-                "metric":"origin.metricName",
-                "points":[[2,10]],
-                "type":"gauge",
-                "tags":["deployment:deployment-name", "job:gorouter"]
-            }`),
-			MatchJSON(`{
-                "metric":"origin.counterName",
-                "points":[[3,15]],
-                "type":"gauge",
-                "tags":["deployment:deployment-name", "job:doppler"]
-            }`),
-		))
 
 		close(done)
 	}, 2.0)
