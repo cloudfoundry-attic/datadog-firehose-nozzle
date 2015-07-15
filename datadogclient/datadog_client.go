@@ -16,12 +16,13 @@ import (
 const DefaultAPIURL = "https://app.datadoghq.com/api/v1"
 
 type Client struct {
-	apiURL               string
-	apiKey               string
-	metricPoints         map[metricKey]metricValue
-	prefix               string
-	ip                   string
-	totalMessageReceived uint64
+	apiURL                string
+	apiKey                string
+	metricPoints          map[metricKey]metricValue
+	prefix                string
+	ip                    string
+	totalMessagesReceived uint64
+	totalMetricsSent      uint64
 }
 
 type metricKey struct {
@@ -66,7 +67,7 @@ func New(apiURL string, apiKey string, prefix string, ip string) *Client {
 }
 
 func (c *Client) AddMetric(envelope *events.Envelope) {
-	atomic.AddUint64(&c.totalMessageReceived, 1)
+	atomic.AddUint64(&c.totalMessagesReceived, 1)
 	if envelope.GetEventType() != events.Envelope_ValueMetric && envelope.GetEventType() != events.Envelope_CounterEvent {
 		return
 	}
@@ -96,7 +97,7 @@ func (c *Client) PostMetrics() error {
 	numMetrics := len(c.metricPoints)
 	log.Printf("Posting %d metrics", numMetrics)
 	url := c.seriesURL()
-	seriesBytes := c.formatMetrics()
+	seriesBytes, formattedMetrics := c.formatMetrics()
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(seriesBytes))
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -108,7 +109,9 @@ func (c *Client) PostMetrics() error {
 		return fmt.Errorf("datadog request returned HTTP status code: %v", resp.StatusCode)
 	}
 
+	atomic.AddUint64(&c.totalMetricsSent, formattedMetrics)
 	c.metricPoints = make(map[metricKey]metricValue)
+
 	return nil
 }
 
@@ -117,7 +120,7 @@ func (c *Client) seriesURL() string {
 	return url
 }
 
-func (c *Client) formatMetrics() []byte {
+func (c *Client) formatMetrics() ([]byte, uint64) {
 	metrics := []Metric{}
 	for key, mVal := range c.metricPoints {
 		metrics = append(metrics, Metric{
@@ -128,21 +131,27 @@ func (c *Client) formatMetrics() []byte {
 		})
 	}
 
-	metrics = append(metrics, Metric{
-		Metric: c.prefix + "totalMessagesReceived",
+	metrics = c.addInternalMetric(metrics, "totalMessagesReceived", &c.totalMessagesReceived)
+	metrics = c.addInternalMetric(metrics, "totalMetricsSent", &c.totalMetricsSent)
+
+	encodedMetric, _ := json.Marshal(Payload{Series: metrics})
+
+	// + 2 for the two internal metrics
+	return encodedMetric, uint64(len(c.metricPoints) + 2)
+}
+
+func (c *Client) addInternalMetric(metrics []Metric, name string, value *uint64) []Metric {
+	return append(metrics, Metric{
+		Metric: c.prefix + name,
 		Points: []Point{
 			Point{
 				Timestamp: time.Now().Unix(),
-				Value:     float64(atomic.LoadUint64(&c.totalMessageReceived)),
+				Value:     float64(atomic.LoadUint64(value)),
 			},
 		},
 		Type: "gauge",
 		Tags: []string{fmt.Sprintf("ip:%s", c.ip)},
 	})
-
-	encodedMetric, _ := json.Marshal(Payload{Series: metrics})
-
-	return encodedMetric
 }
 
 func getName(envelope *events.Envelope) string {

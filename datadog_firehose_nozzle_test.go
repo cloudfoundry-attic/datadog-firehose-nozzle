@@ -159,6 +159,12 @@ var _ = Describe("DatadogFirehoseNozzle", func() {
 
 				Expect(metric.Points).To(HaveLen(1))
 				Expect(metric.Points[0].Value).To(Equal(3.0))
+			} else if metric.Metric == "totalMetricsSent" {
+				Expect(metric.Tags).To(HaveLen(1))
+				Expect(metric.Tags[0]).To(HavePrefix("ip:"))
+
+				Expect(metric.Points).To(HaveLen(1))
+				Expect(metric.Points[0].Value).To(Equal(0.0))
 			} else {
 				panic("Unknown metric " + metric.Metric)
 			}

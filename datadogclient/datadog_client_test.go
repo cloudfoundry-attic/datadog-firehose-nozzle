@@ -65,9 +65,34 @@ var _ = Describe("DatadogClient", func() {
 		var payload datadogclient.Payload
 		err = json.Unmarshal(bodies[0], &payload)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(payload.Series).To(HaveLen(1))
+		Expect(payload.Series).To(HaveLen(2))
 
-		validateMetrics(payload, 2)
+		validateMetrics(payload, 2, 0)
+	})
+
+	It("generates aggregate messages even when idle", func() {
+		c := datadogclient.New(ts.URL, "dummykey", "datadog.nozzle.", "dummy-ip")
+
+		err := c.PostMetrics()
+		Expect(err).ToNot(HaveOccurred())
+
+		Eventually(bodies).Should(HaveLen(1))
+		var payload datadogclient.Payload
+		err = json.Unmarshal(bodies[0], &payload)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(payload.Series).To(HaveLen(2))
+
+		validateMetrics(payload, 0, 0)
+
+		err = c.PostMetrics()
+		Expect(err).ToNot(HaveOccurred())
+
+		Eventually(bodies).Should(HaveLen(2))
+		err = json.Unmarshal(bodies[1], &payload)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(payload.Series).To(HaveLen(2))
+
+		validateMetrics(payload, 0, 2)
 	})
 
 	It("posts ValueMetrics in JSON format", func() {
@@ -105,7 +130,7 @@ var _ = Describe("DatadogClient", func() {
 		var payload datadogclient.Payload
 		err = json.Unmarshal(bodies[0], &payload)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(payload.Series).To(HaveLen(2))
+		Expect(payload.Series).To(HaveLen(3))
 
 		metricFound := false
 		for _, metric := range payload.Series {
@@ -128,7 +153,7 @@ var _ = Describe("DatadogClient", func() {
 		}
 		Expect(metricFound).To(BeTrue())
 
-		validateMetrics(payload, 2)
+		validateMetrics(payload, 2, 0)
 	})
 
 	It("registers metrics with the same name but different tags as different", func() {
@@ -166,7 +191,7 @@ var _ = Describe("DatadogClient", func() {
 		var payload datadogclient.Payload
 		err = json.Unmarshal(bodies[0], &payload)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(payload.Series).To(HaveLen(3))
+		Expect(payload.Series).To(HaveLen(4))
 		dopplerFound := false
 		gorouterFound := false
 		for _, metric := range payload.Series {
@@ -198,7 +223,7 @@ var _ = Describe("DatadogClient", func() {
 		}
 		Expect(dopplerFound).To(BeTrue())
 		Expect(gorouterFound).To(BeTrue())
-		validateMetrics(payload, 2)
+		validateMetrics(payload, 2, 0)
 	})
 
 	It("posts CounterEvents in JSON format and empties map after post", func() {
@@ -234,7 +259,7 @@ var _ = Describe("DatadogClient", func() {
 		var payload datadogclient.Payload
 		err = json.Unmarshal(bodies[0], &payload)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(payload.Series).To(HaveLen(2))
+		Expect(payload.Series).To(HaveLen(3))
 		counterNameFound := false
 		for _, metric := range payload.Series {
 			Expect(metric.Type).To(Equal("gauge"))
@@ -254,7 +279,7 @@ var _ = Describe("DatadogClient", func() {
 			}
 		}
 		Expect(counterNameFound).To(BeTrue())
-		validateMetrics(payload, 2)
+		validateMetrics(payload, 2, 0)
 
 		err = c.PostMetrics()
 		Expect(err).ToNot(HaveOccurred())
@@ -263,15 +288,16 @@ var _ = Describe("DatadogClient", func() {
 
 		err = json.Unmarshal(bodies[1], &payload)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(payload.Series).To(HaveLen(1))
+		Expect(payload.Series).To(HaveLen(2))
 
-		validateMetrics(payload, 2)
+		validateMetrics(payload, 2, 3)
 	})
 
 })
 
-func validateMetrics(payload datadogclient.Payload, totalMessagesReceived int) {
+func validateMetrics(payload datadogclient.Payload, totalMessagesReceived int, totalMetricsSent int) {
 	totalMessagesReceivedFound := false
+	totalMetricsSentFound := false
 	for _, metric := range payload.Series {
 		Expect(metric.Type).To(Equal("gauge"))
 
@@ -281,8 +307,15 @@ func validateMetrics(payload datadogclient.Payload, totalMessagesReceived int) {
 			Expect(metric.Points[0].Timestamp).To(BeNumerically(">", time.Now().Unix()-10), "Timestamp should not be less than 10 seconds ago")
 			Expect(metric.Points[0].Value).To(Equal(float64(totalMessagesReceived)))
 		}
+		if metric.Metric == "datadog.nozzle.totalMetricsSent" {
+			totalMetricsSentFound = true
+			Expect(metric.Points).To(HaveLen(1))
+			Expect(metric.Points[0].Timestamp).To(BeNumerically(">", time.Now().Unix()-10), "Timestamp should not be less than 10 seconds ago")
+			Expect(metric.Points[0].Value).To(Equal(float64(totalMetricsSent)))
+		}
 	}
 	Expect(totalMessagesReceivedFound).To(BeTrue())
+	Expect(totalMetricsSentFound).To(BeTrue())
 }
 
 func handlePost(w http.ResponseWriter, r *http.Request) {
