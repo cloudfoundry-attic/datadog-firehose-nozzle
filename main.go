@@ -28,6 +28,7 @@ type nozzleConfig struct {
 	FlushDurationSeconds   uint32
 	InsecureSSLSkipVerify  bool
 	MetricPrefix           string
+	Deployment             string
 }
 
 func main() {
@@ -71,7 +72,7 @@ func main() {
 		panic(err)
 	}
 
-	client := datadogclient.New(config.DataDogURL, config.DataDogAPIKey, config.MetricPrefix, ipAddress)
+	client := datadogclient.New(config.DataDogURL, config.DataDogAPIKey, config.MetricPrefix, config.Deployment, ipAddress)
 	ticker := time.NewTicker(time.Duration(config.FlushDurationSeconds) * time.Second)
 
 	for {

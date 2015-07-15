@@ -28,7 +28,7 @@ var _ = Describe("DatadogClient", func() {
 	})
 
 	It("ignores messages that aren't value metrics or counter events", func() {
-		c := datadogclient.New(ts.URL, "dummykey", "datadog.nozzle.", "dummy-ip")
+		c := datadogclient.New(ts.URL, "dummykey", "datadog.nozzle.", "test-deployment", "dummy-ip")
 
 		c.AddMetric(&events.Envelope{
 			Origin:    proto.String("origin"),
@@ -71,7 +71,7 @@ var _ = Describe("DatadogClient", func() {
 	})
 
 	It("generates aggregate messages even when idle", func() {
-		c := datadogclient.New(ts.URL, "dummykey", "datadog.nozzle.", "dummy-ip")
+		c := datadogclient.New(ts.URL, "dummykey", "datadog.nozzle.", "test-deployment", "dummy-ip")
 
 		err := c.PostMetrics()
 		Expect(err).ToNot(HaveOccurred())
@@ -96,7 +96,7 @@ var _ = Describe("DatadogClient", func() {
 	})
 
 	It("posts ValueMetrics in JSON format", func() {
-		c := datadogclient.New(ts.URL, "dummykey", "datadog.nozzle.", "dummy-ip")
+		c := datadogclient.New(ts.URL, "dummykey", "datadog.nozzle.", "test-deployment", "dummy-ip")
 
 		c.AddMetric(&events.Envelope{
 			Origin:    proto.String("origin"),
@@ -157,7 +157,7 @@ var _ = Describe("DatadogClient", func() {
 	})
 
 	It("registers metrics with the same name but different tags as different", func() {
-		c := datadogclient.New(ts.URL, "dummykey", "datadog.nozzle.", "dummy-ip")
+		c := datadogclient.New(ts.URL, "dummykey", "datadog.nozzle.", "test-deployment", "dummy-ip")
 
 		c.AddMetric(&events.Envelope{
 			Origin:    proto.String("origin"),
@@ -227,7 +227,7 @@ var _ = Describe("DatadogClient", func() {
 	})
 
 	It("posts CounterEvents in JSON format and empties map after post", func() {
-		c := datadogclient.New(ts.URL, "dummykey", "datadog.nozzle.", "dummy-ip")
+		c := datadogclient.New(ts.URL, "dummykey", "datadog.nozzle.", "test-deployment", "dummy-ip")
 
 		c.AddMetric(&events.Envelope{
 			Origin:    proto.String("origin"),
@@ -301,17 +301,24 @@ func validateMetrics(payload datadogclient.Payload, totalMessagesReceived int, t
 	for _, metric := range payload.Series {
 		Expect(metric.Type).To(Equal("gauge"))
 
+		internalMetric := false
+		var metricValue int
 		if metric.Metric == "datadog.nozzle.totalMessagesReceived" {
 			totalMessagesReceivedFound = true
-			Expect(metric.Points).To(HaveLen(1))
-			Expect(metric.Points[0].Timestamp).To(BeNumerically(">", time.Now().Unix()-10), "Timestamp should not be less than 10 seconds ago")
-			Expect(metric.Points[0].Value).To(Equal(float64(totalMessagesReceived)))
+			internalMetric = true
+			metricValue = totalMessagesReceived
 		}
 		if metric.Metric == "datadog.nozzle.totalMetricsSent" {
 			totalMetricsSentFound = true
+			internalMetric = true
+			metricValue = totalMetricsSent
+		}
+
+		if internalMetric {
 			Expect(metric.Points).To(HaveLen(1))
 			Expect(metric.Points[0].Timestamp).To(BeNumerically(">", time.Now().Unix()-10), "Timestamp should not be less than 10 seconds ago")
-			Expect(metric.Points[0].Value).To(Equal(float64(totalMetricsSent)))
+			Expect(metric.Points[0].Value).To(Equal(float64(metricValue)))
+			Expect(metric.Tags).To(Equal([]string{"ip:dummy-ip", "deployment:test-deployment"}))
 		}
 	}
 	Expect(totalMessagesReceivedFound).To(BeTrue())

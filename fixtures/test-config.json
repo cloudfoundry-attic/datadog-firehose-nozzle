@@ -8,5 +8,6 @@
   "DataDogAPIKey": "some-key",
   "FlushDurationSeconds": 1,
   "InsecureSSLSkipVerify": true,
-  "MetricPrefix": ""
+  "MetricPrefix": "",
+  "Deployment": "deployment-name"
 }

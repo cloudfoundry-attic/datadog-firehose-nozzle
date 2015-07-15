@@ -20,6 +20,7 @@ type Client struct {
 	apiKey                string
 	metricPoints          map[metricKey]metricValue
 	prefix                string
+	deployment            string
 	ip                    string
 	totalMessagesReceived uint64
 	totalMetricsSent      uint64
@@ -56,12 +57,13 @@ type Point struct {
 	Value     float64
 }
 
-func New(apiURL string, apiKey string, prefix string, ip string) *Client {
+func New(apiURL string, apiKey string, prefix string, deployment string, ip string) *Client {
 	return &Client{
 		apiURL:       apiURL,
 		apiKey:       apiKey,
 		metricPoints: make(map[metricKey]metricValue),
 		prefix:       prefix,
+		deployment:   deployment,
 		ip:           ip,
 	}
 }
@@ -150,7 +152,10 @@ func (c *Client) addInternalMetric(metrics []Metric, name string, value *uint64)
 			},
 		},
 		Type: "gauge",
-		Tags: []string{fmt.Sprintf("ip:%s", c.ip)},
+		Tags: []string{
+			fmt.Sprintf("ip:%s", c.ip),
+			fmt.Sprintf("deployment:%s", c.deployment),
+		},
 	})
 }
 
