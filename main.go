@@ -6,6 +6,7 @@ import (
 
 	"github.com/cloudfoundry-incubator/datadog-firehose-nozzle/datadogfirehosenozzle"
 	"github.com/cloudfoundry-incubator/datadog-firehose-nozzle/nozzleconfig"
+	"github.com/cloudfoundry-incubator/datadog-firehose-nozzle/uaatokenfetcher"
 )
 
 func main() {
@@ -20,6 +21,12 @@ func main() {
 		log.Fatalf("Error parsing config: %s", err.Error())
 	}
 
-	datadog_nozzle := datadogfirehosenozzle.NewDatadogFirehoseNozzle(config)
+	tokenFetcher := &uaatokenfetcher.UAATokenFetcher{
+		UaaUrl:                config.UAAURL,
+		Username:              config.Username,
+		Password:              config.Password,
+		InsecureSSLSkipVerify: config.InsecureSSLSkipVerify,
+	}
+	datadog_nozzle := datadogfirehosenozzle.NewDatadogFirehoseNozzle(config, tokenFetcher)
 	datadog_nozzle.Start()
 }

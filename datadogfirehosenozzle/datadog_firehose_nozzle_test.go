@@ -5,15 +5,15 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/cloudfoundry-incubator/datadog-firehose-nozzle/datadogfirehosenozzle"
-	"github.com/cloudfoundry/sonde-go/events"
-	"github.com/gogo/protobuf/proto"
-	"strings"
-	//	"time"
 	"encoding/json"
 	"fmt"
 	"github.com/cloudfoundry-incubator/datadog-firehose-nozzle/datadogclient"
+	"github.com/cloudfoundry-incubator/datadog-firehose-nozzle/datadogfirehosenozzle"
 	"github.com/cloudfoundry-incubator/datadog-firehose-nozzle/nozzleconfig"
+	"github.com/cloudfoundry-incubator/datadog-firehose-nozzle/uaatokenfetcher"
+	"github.com/cloudfoundry/sonde-go/events"
+	"github.com/gogo/protobuf/proto"
+	"strings"
 )
 
 var _ = Describe("Datadogfirehosenozzle", func() {
@@ -33,6 +33,10 @@ var _ = Describe("Datadogfirehosenozzle", func() {
 		fakeFirehose.Start()
 		fakeDatadogAPI.Start()
 
+		tokenFetcher := &uaatokenfetcher.UAATokenFetcher{
+			UaaUrl: fakeUAA.URL(),
+		}
+
 		config = &nozzleconfig.NozzleConfig{
 			UAAURL:               fakeUAA.URL(),
 			FlushDurationSeconds: 10,
@@ -41,7 +45,7 @@ var _ = Describe("Datadogfirehosenozzle", func() {
 			DisableAccessControl: false,
 		}
 
-		nozzle = datadogfirehosenozzle.NewDatadogFirehoseNozzle(config)
+		nozzle = datadogfirehosenozzle.NewDatadogFirehoseNozzle(config, tokenFetcher)
 	})
 
 	AfterEach(func() {
@@ -83,37 +87,34 @@ var _ = Describe("Datadogfirehosenozzle", func() {
 
 	}, 2)
 
-	It("sends an access request to the UAA", func() {
-		go nozzle.Start()
-		Eventually(fakeUAA.Requested).Should(Equal(true))
-	})
-
 	It("Gets a valid authentication token", func() {
 		go nozzle.Start()
 		Eventually(fakeFirehose.Requested).Should(BeTrue())
 		Consistently(fakeFirehose.LastAuthorization).Should(Equal("bearer 123456789"))
 	})
 
-	Context("When the disableAccessControl is set to true", func() {
+	Context("When the DisableAccessControl is set to true", func() {
+		var tokenFetcher *FakeTokenFetcher
+
 		BeforeEach(func() {
 			fakeUAA = NewFakeUAA("", "")
 			fakeToken := fakeUAA.AuthToken()
 			fakeFirehose = NewFakeFirehose(fakeToken)
 			fakeDatadogAPI = NewFakeDatadogAPI()
+			tokenFetcher = &FakeTokenFetcher{}
 
 			fakeUAA.Start()
 			fakeFirehose.Start()
 			fakeDatadogAPI.Start()
 
 			config = &nozzleconfig.NozzleConfig{
-				UAAURL:               fakeUAA.URL(),
 				FlushDurationSeconds: 1,
 				DataDogURL:           fakeDatadogAPI.URL(),
 				TrafficControllerURL: strings.Replace(fakeFirehose.URL(), "http:", "ws:", 1),
 				DisableAccessControl: true,
 			}
 
-			nozzle = datadogfirehosenozzle.NewDatadogFirehoseNozzle(config)
+			nozzle = datadogfirehosenozzle.NewDatadogFirehoseNozzle(config, tokenFetcher)
 		})
 
 		AfterEach(func() {
@@ -122,15 +123,20 @@ var _ = Describe("Datadogfirehosenozzle", func() {
 			fakeDatadogAPI.Close()
 		})
 
-		It("does not send an access request to the UAA", func() {
-			go nozzle.Start()
-			Consistently(fakeUAA.Requested).Should(Equal(false))
-		})
-
-		It("Gets an empty authentication token", func() {
+		It("can still tries to connect to the firehose", func() {
 			go nozzle.Start()
 			Eventually(fakeFirehose.Requested).Should(BeTrue())
+		})
+
+		It("gets an empty authentication token", func() {
+			go nozzle.Start()
+			Consistently(fakeUAA.Requested).Should(Equal(false))
 			Consistently(fakeFirehose.LastAuthorization).Should(Equal(""))
+		})
+
+		It("does not rquire the presence of config.UAAURL", func() {
+			nozzle.Start()
+			Consistently(func() int { return tokenFetcher.NumCalls }).Should(Equal(0))
 		})
 	})
 })

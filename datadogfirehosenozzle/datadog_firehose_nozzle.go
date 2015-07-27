@@ -4,7 +4,6 @@ import (
 	"crypto/tls"
 	"github.com/cloudfoundry-incubator/datadog-firehose-nozzle/datadogclient"
 	"github.com/cloudfoundry-incubator/datadog-firehose-nozzle/nozzleconfig"
-	"github.com/cloudfoundry-incubator/uaago"
 	"github.com/cloudfoundry/noaa"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/pivotal-golang/localip"
@@ -13,39 +12,34 @@ import (
 )
 
 type DatadogFirehoseNozzle struct {
-	config   *nozzleconfig.NozzleConfig
-	done     chan struct{}
-	messages chan *events.Envelope
+	config           *nozzleconfig.NozzleConfig
+	done             chan struct{}
+	messages         chan *events.Envelope
+	authTokenFetcher AuthTokenFetcher
 }
 
-func NewDatadogFirehoseNozzle(config *nozzleconfig.NozzleConfig) *DatadogFirehoseNozzle {
+type AuthTokenFetcher interface {
+	FetchAuthToken() string
+}
+
+func NewDatadogFirehoseNozzle(config *nozzleconfig.NozzleConfig, tokenFetcher AuthTokenFetcher) *DatadogFirehoseNozzle {
 	return &DatadogFirehoseNozzle{
-		config:   config,
-		done:     make(chan struct{}),
-		messages: make(chan *events.Envelope),
+		config:           config,
+		done:             make(chan struct{}),
+		messages:         make(chan *events.Envelope),
+		authTokenFetcher: tokenFetcher,
 	}
 }
 
 func (d *DatadogFirehoseNozzle) Start() {
-	authToken := d.requestForAuthToken()
+	var authToken string
+
+	if !d.config.DisableAccessControl {
+		authToken = d.authTokenFetcher.FetchAuthToken()
+	}
+
 	d.consumeFirehose(authToken)
 	d.postToDatadog()
-}
-
-func (d *DatadogFirehoseNozzle) requestForAuthToken() string {
-	uaaClient, err := uaago.NewClient(d.config.UAAURL)
-	if err != nil {
-		log.Fatalf("Error creating uaa client: %s", err.Error())
-	}
-
-	var authToken string
-	if !d.config.DisableAccessControl {
-		authToken, err = uaaClient.GetAuthToken(d.config.Username, d.config.Password, d.config.InsecureSSLSkipVerify)
-		if err != nil {
-			log.Fatalf("Error getting oauth token: %s. Please check your username and password.", err.Error())
-		}
-	}
-	return authToken
 }
 
 func (d *DatadogFirehoseNozzle) consumeFirehose(authToken string) {
