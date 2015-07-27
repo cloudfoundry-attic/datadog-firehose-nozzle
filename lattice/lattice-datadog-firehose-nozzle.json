@@ -1,5 +1,5 @@
 {
-  "TrafficControllerURL": "ws://192.168.11.11.xip.io",
+  "TrafficControllerURL": "ws://doppler.192.168.11.11.xip.io",
   "FirehoseSubscriptionID": "datadog-nozzle",
   "DataDogURL": "https://app.datadoghq.com/api/v1/series",
   "DataDogAPIKey": "<enter api key>",
