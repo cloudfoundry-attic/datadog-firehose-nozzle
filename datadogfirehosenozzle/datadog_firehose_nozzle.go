@@ -3,6 +3,7 @@ package datadogfirehosenozzle
 import (
 	"crypto/tls"
 	"github.com/cloudfoundry-incubator/datadog-firehose-nozzle/datadogclient"
+	"github.com/cloudfoundry-incubator/datadog-firehose-nozzle/nozzleconfig"
 	"github.com/cloudfoundry-incubator/uaago"
 	"github.com/cloudfoundry/noaa"
 	"github.com/cloudfoundry/sonde-go/events"
@@ -11,28 +12,14 @@ import (
 	"time"
 )
 
-type NozzleConfig struct {
-	UAAURL                 string
-	Username               string
-	Password               string
-	TrafficControllerURL   string
-	FirehoseSubscriptionID string
-	DataDogURL             string
-	DataDogAPIKey          string
-	FlushDurationSeconds   uint32
-	InsecureSSLSkipVerify  bool
-	MetricPrefix           string
-	Deployment             string
-}
-
 type DatadogFirehoseNozzle struct {
-	config               NozzleConfig
+	config               *nozzleconfig.NozzleConfig
 	disableAccessControl bool
 	done                 chan struct{}
 	messages             chan *events.Envelope
 }
 
-func NewDatadogFirehoseNozzle(config NozzleConfig, disableAccessControl bool) *DatadogFirehoseNozzle {
+func NewDatadogFirehoseNozzle(config *nozzleconfig.NozzleConfig, disableAccessControl bool) *DatadogFirehoseNozzle {
 	return &DatadogFirehoseNozzle{
 		config:               config,
 		disableAccessControl: disableAccessControl,

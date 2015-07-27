@@ -9,5 +9,6 @@
   "FlushDurationSeconds": 15,
   "InsecureSSLSkipVerify": true,
   "MetricPrefix": "datadogclient",
-  "Deployment": "deployment-name"
+  "Deployment": "deployment-name",
+  "DisableAccessControl": false
 }

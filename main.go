@@ -1,13 +1,11 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
-	"fmt"
-	"io/ioutil"
 	"log"
 
 	"github.com/cloudfoundry-incubator/datadog-firehose-nozzle/datadogfirehosenozzle"
+	"github.com/cloudfoundry-incubator/datadog-firehose-nozzle/nozzleconfig"
 )
 
 func main() {
@@ -16,7 +14,8 @@ func main() {
 		disableAccessControl = flag.Bool("disableAccessControl", false, "Disable access validation with UAA")
 	)
 	flag.Parse()
-	config, err := parseConfig(*configFilePath)
+
+	config, err := nozzleconfig.Parse(*configFilePath)
 
 	if err != nil {
 		log.Fatalf("Error parsing config: %s", err.Error())
@@ -24,18 +23,4 @@ func main() {
 
 	datadog_nozzle := datadogfirehosenozzle.NewDatadogFirehoseNozzle(config, *disableAccessControl)
 	datadog_nozzle.Start()
-}
-
-func parseConfig(configPath string) (datadogfirehosenozzle.NozzleConfig, error) {
-	configBytes, err := ioutil.ReadFile(configPath)
-	var config datadogfirehosenozzle.NozzleConfig
-	if err != nil {
-		return config, fmt.Errorf("Can not read config file [%s]: %s", configPath, err)
-	}
-
-	err = json.Unmarshal(configBytes, &config)
-	if err != nil {
-		return config, fmt.Errorf("Can not parse config file %s: %s", configPath, err)
-	}
-	return config, err
 }

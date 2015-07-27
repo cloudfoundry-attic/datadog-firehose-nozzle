@@ -13,13 +13,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/cloudfoundry-incubator/datadog-firehose-nozzle/datadogclient"
+	"github.com/cloudfoundry-incubator/datadog-firehose-nozzle/nozzleconfig"
 )
 
 var _ = Describe("Datadogfirehosenozzle", func() {
 	var fakeUAA *FakeUAA
 	var fakeFirehose *FakeFirehose
 	var fakeDatadogAPI *FakeDatadogAPI
-	var config datadogfirehosenozzle.NozzleConfig
+	var config *nozzleconfig.NozzleConfig
 	var disableAccessControl bool
 	var nozzle *datadogfirehosenozzle.DatadogFirehoseNozzle
 
@@ -35,7 +36,7 @@ var _ = Describe("Datadogfirehosenozzle", func() {
 			fakeFirehose.Start()
 			fakeDatadogAPI.Start()
 
-			config = datadogfirehosenozzle.NozzleConfig{
+			config = &nozzleconfig.NozzleConfig{
 				UAAURL:               fakeUAA.URL(),
 				FlushDurationSeconds: 1,
 				DataDogURL:           fakeDatadogAPI.URL(),
@@ -109,7 +110,7 @@ var _ = Describe("Datadogfirehosenozzle", func() {
 			fakeFirehose.Start()
 			fakeDatadogAPI.Start()
 
-			config = datadogfirehosenozzle.NozzleConfig{
+			config = &nozzleconfig.NozzleConfig{
 				UAAURL:               fakeUAA.URL(),
 				FlushDurationSeconds: 10,
 				DataDogURL:           fakeDatadogAPI.URL(),
