@@ -10,13 +10,10 @@ import (
 )
 
 func main() {
-	var (
-		configFilePath = flag.String("config", "config/datadog-firehose-nozzle.json", "Location of the nozzle config json file")
-	)
+	configFilePath := flag.String("config", "config/datadog-firehose-nozzle.json", "Location of the nozzle config json file")
 	flag.Parse()
 
 	config, err := nozzleconfig.Parse(*configFilePath)
-
 	if err != nil {
 		log.Fatalf("Error parsing config: %s", err.Error())
 	}
