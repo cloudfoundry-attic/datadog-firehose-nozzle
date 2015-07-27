@@ -20,7 +20,7 @@ before_install:
 - go get -v github.com/golang/lint/golint
 - go install -v github.com/onsi/ginkgo/ginkgo
 
-before_script:
+install:
 - go get -v -d -t ./...
 
 script: PATH=$HOME/gopath/bin:$PATH bin/test
