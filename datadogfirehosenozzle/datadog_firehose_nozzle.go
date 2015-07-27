@@ -13,18 +13,16 @@ import (
 )
 
 type DatadogFirehoseNozzle struct {
-	config               *nozzleconfig.NozzleConfig
-	disableAccessControl bool
-	done                 chan struct{}
-	messages             chan *events.Envelope
+	config   *nozzleconfig.NozzleConfig
+	done     chan struct{}
+	messages chan *events.Envelope
 }
 
-func NewDatadogFirehoseNozzle(config *nozzleconfig.NozzleConfig, disableAccessControl bool) *DatadogFirehoseNozzle {
+func NewDatadogFirehoseNozzle(config *nozzleconfig.NozzleConfig) *DatadogFirehoseNozzle {
 	return &DatadogFirehoseNozzle{
-		config:               config,
-		disableAccessControl: disableAccessControl,
-		done:                 make(chan struct{}),
-		messages:             make(chan *events.Envelope),
+		config:   config,
+		done:     make(chan struct{}),
+		messages: make(chan *events.Envelope),
 	}
 }
 
@@ -41,7 +39,7 @@ func (d *DatadogFirehoseNozzle) requestForAuthToken() string {
 	}
 
 	var authToken string
-	if d.disableAccessControl == false {
+	if !d.config.DisableAccessControl {
 		authToken, err = uaaClient.GetAuthToken(d.config.Username, d.config.Password, d.config.InsecureSSLSkipVerify)
 		if err != nil {
 			log.Fatalf("Error getting oauth token: %s. Please check your username and password.", err.Error())

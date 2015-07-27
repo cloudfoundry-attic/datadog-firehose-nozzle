@@ -10,8 +10,7 @@ import (
 
 func main() {
 	var (
-		configFilePath       = flag.String("config", "config/datadog-firehose-nozzle.json", "Location of the nozzle config json file")
-		disableAccessControl = flag.Bool("disableAccessControl", false, "Disable access validation with UAA")
+		configFilePath = flag.String("config", "config/datadog-firehose-nozzle.json", "Location of the nozzle config json file")
 	)
 	flag.Parse()
 
@@ -21,6 +20,6 @@ func main() {
 		log.Fatalf("Error parsing config: %s", err.Error())
 	}
 
-	datadog_nozzle := datadogfirehosenozzle.NewDatadogFirehoseNozzle(config, *disableAccessControl)
+	datadog_nozzle := datadogfirehosenozzle.NewDatadogFirehoseNozzle(config)
 	datadog_nozzle.Start()
 }
