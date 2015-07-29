@@ -5,7 +5,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/cloudfoundry-incubator/datadog-firehose-nozzle/datadogclient"
@@ -15,7 +14,7 @@ import (
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 	"github.com/gorilla/websocket"
-	"io/ioutil"
+	"github.com/onsi/gomega/gbytes"
 	"log"
 	"strings"
 )
@@ -26,7 +25,7 @@ var _ = Describe("Datadog Firehose Nozzle", func() {
 	var fakeDatadogAPI *FakeDatadogAPI
 	var config *nozzleconfig.NozzleConfig
 	var nozzle *datadogfirehosenozzle.DatadogFirehoseNozzle
-	var logOutput *bytes.Buffer
+	var logOutput *gbytes.Buffer
 
 	BeforeEach(func() {
 		fakeUAA = NewFakeUAA("bearer", "123456789")
@@ -51,8 +50,7 @@ var _ = Describe("Datadog Firehose Nozzle", func() {
 			MetricPrefix:         "datadog.nozzle.",
 		}
 
-		buf := make([]byte, 0, 2048)
-		logOutput = bytes.NewBuffer(buf)
+		logOutput = gbytes.NewBuffer()
 		log.SetOutput(logOutput)
 		nozzle = datadogfirehosenozzle.NewDatadogFirehoseNozzle(config, tokenFetcher)
 	})
@@ -91,9 +89,7 @@ var _ = Describe("Datadog Firehose Nozzle", func() {
 		err := json.Unmarshal(contents, &payload)
 		Expect(err).ToNot(HaveOccurred())
 
-		b, err := ioutil.ReadAll(logOutput)
-		Expect(err).ToNot(HaveOccurred())
-		Expect(string(b)).ToNot(ContainSubstring("Error while reading from the firehose"))
+		Expect(logOutput).ToNot(gbytes.Say("Error while reading from the firehose"))
 
 		// +2 internal metrics that show totalMessagesReceived and totalMetricSent
 		Expect(payload.Series).To(HaveLen(12))
@@ -132,12 +128,9 @@ var _ = Describe("Datadog Firehose Nozzle", func() {
 
 		Expect(findSlowConsumerMetric(payload)).NotTo(BeNil())
 
-		b, err := ioutil.ReadAll(logOutput)
-		Expect(err).ToNot(HaveOccurred())
-
-		Expect(string(b)).To(ContainSubstring("Error while reading from the firehose"))
-		Expect(string(b)).To(ContainSubstring("Client did not respond to ping before keep-alive timeout expired."))
-		Expect(string(b)).To(ContainSubstring("Disconnected because nozzle couldn't keep up."))
+		Expect(logOutput).To(gbytes.Say("Error while reading from the firehose"))
+		Expect(logOutput).To(gbytes.Say("Client did not respond to ping before keep-alive timeout expired."))
+		Expect(logOutput).To(gbytes.Say("Disconnected because nozzle couldn't keep up."))
 	}, 2)
 
 	It("does not report slow consumer error when closed for other reasons", func(done Done) {
@@ -156,18 +149,46 @@ var _ = Describe("Datadog Firehose Nozzle", func() {
 
 		Expect(findSlowConsumerMetric(payload)).To(BeNil())
 
-		b, err := ioutil.ReadAll(logOutput)
-		Expect(err).ToNot(HaveOccurred())
-
-		Expect(string(b)).To(ContainSubstring("Error while reading from the firehose"))
-		Expect(string(b)).NotTo(ContainSubstring("Client did not respond to ping before keep-alive timeout expired."))
-		Expect(string(b)).NotTo(ContainSubstring("Disconnected because nozzle couldn't keep up."))
+		Expect(logOutput).To(gbytes.Say("Error while reading from the firehose"))
+		Expect(logOutput).NotTo(gbytes.Say("Client did not respond to ping before keep-alive timeout expired."))
+		Expect(logOutput).NotTo(gbytes.Say("Disconnected because nozzle couldn't keep up."))
 	}, 2)
 
 	It("gets a valid authentication token", func() {
 		go nozzle.Start()
 		Eventually(fakeFirehose.Requested).Should(BeTrue())
 		Consistently(fakeFirehose.LastAuthorization).Should(Equal("bearer 123456789"))
+	})
+
+	Context("receives a truncatingbuffer.droppedmessage value metric,", func() {
+		It("sets a slow-consumer error", func() {
+			slowConsumerError := events.Envelope{
+				Origin:    proto.String("DopplerServer"),
+				Timestamp: proto.Int64(1000000000),
+				EventType: events.Envelope_CounterEvent.Enum(),
+				CounterEvent: &events.CounterEvent{
+					Name:  proto.String("TruncatingBuffer.DroppedMessages"),
+					Delta: proto.Uint64(1),
+					Total: proto.Uint64(1),
+				},
+				Deployment: proto.String("deployment-name"),
+				Job:        proto.String("doppler"),
+			}
+			fakeFirehose.AddEvent(slowConsumerError)
+
+			go nozzle.Start()
+
+			var contents []byte
+			Eventually(fakeDatadogAPI.ReceivedContents).Should(Receive(&contents))
+
+			var payload datadogclient.Payload
+			err := json.Unmarshal(contents, &payload)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(findSlowConsumerMetric(payload)).NotTo(BeNil())
+
+			Expect(logOutput).To(gbytes.Say("We've intercepted an upstream message which indicates that the nozzle or the TrafficController is not keeping up. Please try scaling up the nozzle."))
+		})
 	})
 
 	Context("when the DisableAccessControl is set to true", func() {
