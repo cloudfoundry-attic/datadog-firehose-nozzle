@@ -11,7 +11,7 @@ import (
 
 func TestDatadogFirehoseNozzle(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "DatadogFirehoseNozzle Suite")
+	RunSpecs(t, "Integration Suite")
 }
 
 var pathToNozzleExecutable string

@@ -11,7 +11,7 @@ import (
 
 func TestDatadogfirehosenozzle(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Datadogfirehosenozzle Suite")
+	RunSpecs(t, "DatadogFirehoseNozzle Suite")
 }
 
 var _ = BeforeSuite(func() {

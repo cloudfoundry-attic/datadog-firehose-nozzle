@@ -20,12 +20,14 @@ type FakeFirehose struct {
 	lastAuthorization string
 	requested         bool
 
-	events []events.Envelope
+	events       []events.Envelope
+	closeMessage []byte
 }
 
 func NewFakeFirehose(validToken string) *FakeFirehose {
 	return &FakeFirehose{
-		validToken: validToken,
+		validToken:   validToken,
+		closeMessage: websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""),
 	}
 }
 
@@ -60,6 +62,13 @@ func (f *FakeFirehose) AddEvent(event events.Envelope) {
 	f.events = append(f.events, event)
 }
 
+func (f *FakeFirehose) SetCloseMessage(message []byte) {
+	f.lock.Lock()
+	defer f.lock.Unlock()
+	f.closeMessage = make([]byte, len(message))
+	copy(f.closeMessage, message)
+}
+
 func (f *FakeFirehose) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	f.lock.Lock()
 	defer f.lock.Unlock()
@@ -81,7 +90,7 @@ func (f *FakeFirehose) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	ws, _ := upgrader.Upgrade(rw, r, nil)
 
 	defer ws.Close()
-	defer ws.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""), time.Time{})
+	defer ws.WriteControl(websocket.CloseMessage, f.closeMessage, time.Time{})
 
 	for _, envelope := range f.events {
 		buffer, _ := proto.Marshal(&envelope)

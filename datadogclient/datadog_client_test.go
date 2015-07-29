@@ -11,6 +11,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 
 	"encoding/json"
+	"errors"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"time"
@@ -293,6 +294,52 @@ var _ = Describe("DatadogClient", func() {
 		validateMetrics(payload, 2, 3)
 	})
 
+	It("sends an error metric when consumer error is set", func() {
+		c := datadogclient.New(ts.URL, "dummykey", "datadog.nozzle.", "test-deployment", "dummy-ip")
+
+		c.SetSlowConsumerError(errors.New("bad things happened"))
+
+		err := c.PostMetrics()
+		Expect(err).ToNot(HaveOccurred())
+
+		Eventually(bodies).Should(HaveLen(1))
+		var payload datadogclient.Payload
+		err = json.Unmarshal(bodies[0], &payload)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(payload.Series).To(HaveLen(3))
+
+		errMetric := findSlowConsumerMetric(payload)
+		Expect(errMetric).NotTo(BeNil())
+		Expect(errMetric.Type).To(Equal("gauge"))
+		Expect(errMetric.Points).To(HaveLen(1))
+		Expect(errMetric.Points[0].Value).To(BeEquivalentTo(1))
+	})
+
+	It("only sends an error metric once", func() {
+		c := datadogclient.New(ts.URL, "dummykey", "datadog.nozzle.", "test-deployment", "dummy-ip")
+
+		c.SetSlowConsumerError(errors.New("bad things happened"))
+
+		err := c.PostMetrics()
+		Expect(err).ToNot(HaveOccurred())
+
+		Eventually(bodies).Should(HaveLen(1))
+		var payload datadogclient.Payload
+		err = json.Unmarshal(bodies[0], &payload)
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(findSlowConsumerMetric(payload)).NotTo(BeNil())
+
+		err = c.PostMetrics()
+		Expect(err).ToNot(HaveOccurred())
+
+		Eventually(bodies).Should(HaveLen(2))
+		err = json.Unmarshal(bodies[1], &payload)
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(findSlowConsumerMetric(payload)).To(BeNil())
+	})
+
 })
 
 func validateMetrics(payload datadogclient.Payload, totalMessagesReceived int, totalMetricsSent int) {
@@ -333,4 +380,13 @@ func handlePost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	bodies = append(bodies, body)
+}
+
+func findSlowConsumerMetric(payload datadogclient.Payload) *datadogclient.Metric {
+	for _, metric := range payload.Series {
+		if metric.Metric == "datadog.nozzle.restartsFromSlowNozzle" {
+			return &metric
+		}
+	}
+	return nil
 }

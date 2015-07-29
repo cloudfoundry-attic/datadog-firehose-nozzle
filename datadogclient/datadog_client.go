@@ -10,7 +10,6 @@ import (
 
 	"errors"
 	"github.com/cloudfoundry/sonde-go/events"
-	"sync/atomic"
 )
 
 const DefaultAPIURL = "https://app.datadoghq.com/api/v1"
@@ -24,6 +23,7 @@ type Client struct {
 	ip                    string
 	totalMessagesReceived uint64
 	totalMetricsSent      uint64
+	slowConsumerError     error
 }
 
 type metricKey struct {
@@ -68,8 +68,12 @@ func New(apiURL string, apiKey string, prefix string, deployment string, ip stri
 	}
 }
 
+func (c *Client) SetSlowConsumerError(err error) {
+	c.slowConsumerError = err
+}
+
 func (c *Client) AddMetric(envelope *events.Envelope) {
-	atomic.AddUint64(&c.totalMessagesReceived, 1)
+	c.totalMessagesReceived++
 	if envelope.GetEventType() != events.Envelope_ValueMetric && envelope.GetEventType() != events.Envelope_CounterEvent {
 		return
 	}
@@ -99,7 +103,7 @@ func (c *Client) PostMetrics() error {
 	numMetrics := len(c.metricPoints)
 	log.Printf("Posting %d metrics", numMetrics)
 	url := c.seriesURL()
-	seriesBytes, formattedMetrics := c.formatMetrics()
+	seriesBytes, metricsCount := c.formatMetrics()
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(seriesBytes))
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -111,7 +115,7 @@ func (c *Client) PostMetrics() error {
 		return fmt.Errorf("datadog request returned HTTP status code: %v", resp.StatusCode)
 	}
 
-	atomic.AddUint64(&c.totalMetricsSent, formattedMetrics)
+	c.totalMetricsSent += metricsCount
 	c.metricPoints = make(map[metricKey]metricValue)
 
 	return nil
@@ -133,22 +137,26 @@ func (c *Client) formatMetrics() ([]byte, uint64) {
 		})
 	}
 
-	metrics = c.addInternalMetric(metrics, "totalMessagesReceived", &c.totalMessagesReceived)
-	metrics = c.addInternalMetric(metrics, "totalMetricsSent", &c.totalMetricsSent)
+	metrics = c.addInternalMetric(metrics, "totalMessagesReceived", c.totalMessagesReceived)
+	metrics = c.addInternalMetric(metrics, "totalMetricsSent", c.totalMetricsSent)
+
+	if c.slowConsumerError != nil {
+		metrics = c.addInternalMetric(metrics, "restartsFromSlowNozzle", uint64(1))
+		c.slowConsumerError = nil
+	}
 
 	encodedMetric, _ := json.Marshal(Payload{Series: metrics})
 
-	// + 2 for the two internal metrics
-	return encodedMetric, uint64(len(c.metricPoints) + 2)
+	return encodedMetric, uint64(len(metrics))
 }
 
-func (c *Client) addInternalMetric(metrics []Metric, name string, value *uint64) []Metric {
+func (c *Client) addInternalMetric(metrics []Metric, name string, value uint64) []Metric {
 	return append(metrics, Metric{
 		Metric: c.prefix + name,
 		Points: []Point{
 			Point{
 				Timestamp: time.Now().Unix(),
-				Value:     float64(atomic.LoadUint64(value)),
+				Value:     float64(value),
 			},
 		},
 		Type: "gauge",

@@ -11,7 +11,7 @@ import (
 
 func TestDatadogclient(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Datadogclient Suite")
+	RunSpecs(t, "DatadogClient Suite")
 }
 
 var _ = BeforeSuite(func() {
