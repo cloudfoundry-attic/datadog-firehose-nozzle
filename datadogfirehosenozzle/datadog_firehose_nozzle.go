@@ -95,11 +95,13 @@ func (d *DatadogFirehoseNozzle) postMetrics() {
 func (d *DatadogFirehoseNozzle) handleError(err error) {
 	if err != io.EOF {
 		log.Printf("Error while reading from the firehose: %v", err)
-		if strings.Contains(err.Error(), strconv.Itoa(websocket.CloseInternalServerErr)) {
-			log.Printf("Disconnected because nozzle couldn't keep up. Please try scaling up the nozzle.")
-			d.client.SetSlowConsumerError(err)
-		}
 	}
+
+	if isCloseError(err) {
+		log.Printf("Disconnected because nozzle couldn't keep up. Please try scaling up the nozzle.")
+		d.client.SetSlowConsumerError(err)
+	}
+
 	d.consumer.Close()
 	d.postMetrics()
 }
@@ -110,4 +112,9 @@ func (d *DatadogFirehoseNozzle) handleMessage(envelope *events.Envelope) {
 		err := fmt.Errorf("Messages dropped because nozzle couldn't keep up.")
 		d.client.SetSlowConsumerError(err)
 	}
+}
+
+func isCloseError(err error) bool {
+	errorMsg := "websocket: close " + strconv.Itoa(websocket.CloseInternalServerErr)
+	return strings.Contains(err.Error(), errorMsg)
 }
