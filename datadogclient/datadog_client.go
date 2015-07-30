@@ -102,8 +102,12 @@ func (c *Client) AddMetric(envelope *events.Envelope) {
 func (c *Client) PostMetrics() error {
 	numMetrics := len(c.metricPoints)
 	log.Printf("Posting %d metrics", numMetrics)
+
 	url := c.seriesURL()
+
+	c.populateInternalMetrics()
 	seriesBytes, metricsCount := c.formatMetrics()
+
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(seriesBytes))
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -126,6 +130,18 @@ func (c *Client) seriesURL() string {
 	return url
 }
 
+func (c *Client) populateInternalMetrics() {
+	c.addInternalMetric("totalMessagesReceived", c.totalMessagesReceived)
+	c.addInternalMetric("totalMetricsSent", c.totalMetricsSent)
+
+	if c.slowConsumerError != nil {
+		c.addInternalMetric("restartsFromSlowNozzle", uint64(1))
+		c.slowConsumerError = nil
+	} else {
+		c.addInternalMetric("restartsFromSlowNozzle", uint64(0))
+	}
+}
+
 func (c *Client) formatMetrics() ([]byte, uint64) {
 	metrics := []Metric{}
 	for key, mVal := range c.metricPoints {
@@ -137,36 +153,31 @@ func (c *Client) formatMetrics() ([]byte, uint64) {
 		})
 	}
 
-	metrics = c.addInternalMetric(metrics, "totalMessagesReceived", c.totalMessagesReceived)
-	metrics = c.addInternalMetric(metrics, "totalMetricsSent", c.totalMetricsSent)
-
-	if c.slowConsumerError != nil {
-		metrics = c.addInternalMetric(metrics, "restartsFromSlowNozzle", uint64(1))
-		c.slowConsumerError = nil
-	} else {
-		metrics = c.addInternalMetric(metrics, "restartsFromSlowNozzle", uint64(0))
-	}
-
 	encodedMetric, _ := json.Marshal(Payload{Series: metrics})
-
 	return encodedMetric, uint64(len(metrics))
 }
 
-func (c *Client) addInternalMetric(metrics []Metric, name string, value uint64) []Metric {
-	return append(metrics, Metric{
-		Metric: c.prefix + name,
-		Points: []Point{
-			Point{
-				Timestamp: time.Now().Unix(),
-				Value:     float64(value),
-			},
-		},
-		Type: "gauge",
-		Tags: []string{
+func (c *Client) addInternalMetric(name string, value uint64) {
+	key := metricKey{
+		name: name,
+		deployment: c.deployment,
+		ip: c.ip,
+	}
+
+	point := Point{
+		Timestamp: time.Now().Unix(),
+		Value: float64(value),
+	}
+
+	mValue := metricValue{
+		tags: []string{
 			fmt.Sprintf("ip:%s", c.ip),
 			fmt.Sprintf("deployment:%s", c.deployment),
 		},
-	})
+		points: []Point{ point },
+	}
+
+	c.metricPoints[key] = mValue
 }
 
 func getName(envelope *events.Envelope) string {
