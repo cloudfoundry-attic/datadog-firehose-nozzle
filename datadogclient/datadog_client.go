@@ -68,7 +68,7 @@ func New(apiURL string, apiKey string, prefix string, deployment string, ip stri
 }
 
 func (c *Client) AlertSlowConsumerError() {
-	c.addInternalMetric("restartsFromSlowNozzle", uint64(1))
+	c.addInternalMetric("slowConsumerAlert", uint64(1))
 }
 
 func (c *Client) AddMetric(envelope *events.Envelope) {
@@ -134,13 +134,13 @@ func (c *Client) populateInternalMetrics() {
 	c.addInternalMetric("totalMetricsSent", c.totalMetricsSent)
 
 	if !c.containsSlowConsumerAlert() {
-		c.addInternalMetric("restartsFromSlowNozzle", uint64(0))
+		c.addInternalMetric("slowConsumerAlert", uint64(0))
 	}
 }
 
 func (c *Client) containsSlowConsumerAlert() bool {
 	key := metricKey{
-		name: "restartsFromSlowNozzle",
+		name: "slowConsumerAlert",
 		deployment: c.deployment,
 		ip: c.ip,
 	}

@@ -91,7 +91,7 @@ var _ = Describe("Datadog Firehose Nozzle", func() {
 
 		Expect(logOutput).ToNot(gbytes.Say("Error while reading from the firehose"))
 
-		// +3 internal metrics that show totalMessagesReceived, totalMetricSent, and restartsFromSlowNozzle
+		// +3 internal metrics that show totalMessagesReceived, totalMetricSent, and slowConsumerAlert
 		Expect(payload.Series).To(HaveLen(13))
 
 	}, 2)
@@ -243,7 +243,7 @@ var _ = Describe("Datadog Firehose Nozzle", func() {
 
 func findSlowConsumerMetric(payload datadogclient.Payload) *datadogclient.Metric {
 	for _, metric := range payload.Series {
-		if metric.Metric == "datadog.nozzle.restartsFromSlowNozzle" {
+		if metric.Metric == "datadog.nozzle.slowConsumerAlert" {
 			return &metric
 		}
 	}

@@ -293,7 +293,7 @@ var _ = Describe("DatadogClient", func() {
 		validateMetrics(payload, 2, 4)
 	})
 
-	It("sends a value 1 for the restartsFromSlowNozzle metric when consumer error is set", func() {
+	It("sends a value 1 for the slowConsumerAlert metric when consumer error is set", func() {
 		c := datadogclient.New(ts.URL, "dummykey", "datadog.nozzle.", "test-deployment", "dummy-ip")
 
 		c.AlertSlowConsumerError()
@@ -314,7 +314,7 @@ var _ = Describe("DatadogClient", func() {
 		Expect(errMetric.Points[0].Value).To(BeEquivalentTo(1))
 	})
 
-	It("sends a value 0 for the restartsFromSlowNozzle metric when consumer error is not set", func() {
+	It("sends a value 0 for the slowConsumerAlert metric when consumer error is not set", func() {
 		c := datadogclient.New(ts.URL, "dummykey", "datadog.nozzle.", "test-deployment", "dummy-ip")
 
 		err := c.PostMetrics()
@@ -406,7 +406,7 @@ func handlePost(w http.ResponseWriter, r *http.Request) {
 
 func findSlowConsumerMetric(payload datadogclient.Payload) *datadogclient.Metric {
 	for _, metric := range payload.Series {
-		if metric.Metric == "datadog.nozzle.restartsFromSlowNozzle" {
+		if metric.Metric == "datadog.nozzle.slowConsumerAlert" {
 			return &metric
 		}
 	}
