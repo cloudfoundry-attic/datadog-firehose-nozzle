@@ -2,7 +2,6 @@ package datadogfirehosenozzle
 
 import (
 	"crypto/tls"
-	"fmt"
 	"github.com/cloudfoundry-incubator/datadog-firehose-nozzle/datadogclient"
 	"github.com/cloudfoundry-incubator/datadog-firehose-nozzle/nozzleconfig"
 	"github.com/cloudfoundry/noaa"
@@ -99,7 +98,7 @@ func (d *DatadogFirehoseNozzle) handleError(err error) {
 
 	if isCloseError(err) {
 		log.Printf("Disconnected because nozzle couldn't keep up. Please try scaling up the nozzle.")
-		d.client.SetSlowConsumerError(err)
+		d.client.AlertSlowConsumerError()
 	}
 
 	d.consumer.Close()
@@ -109,8 +108,7 @@ func (d *DatadogFirehoseNozzle) handleError(err error) {
 func (d *DatadogFirehoseNozzle) handleMessage(envelope *events.Envelope) {
 	if envelope.GetEventType() == events.Envelope_CounterEvent && envelope.CounterEvent.GetName() == "TruncatingBuffer.DroppedMessages" && envelope.GetOrigin() == "doppler" {
 		log.Printf("We've intercepted an upstream message which indicates that the nozzle or the TrafficController is not keeping up. Please try scaling up the nozzle.")
-		err := fmt.Errorf("Messages dropped because nozzle couldn't keep up.")
-		d.client.SetSlowConsumerError(err)
+		d.client.AlertSlowConsumerError()
 	}
 }
 

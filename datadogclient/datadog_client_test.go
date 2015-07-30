@@ -11,7 +11,6 @@ import (
 	"github.com/gogo/protobuf/proto"
 
 	"encoding/json"
-	"errors"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"time"
@@ -297,7 +296,7 @@ var _ = Describe("DatadogClient", func() {
 	It("sends a value 1 for the restartsFromSlowNozzle metric when consumer error is set", func() {
 		c := datadogclient.New(ts.URL, "dummykey", "datadog.nozzle.", "test-deployment", "dummy-ip")
 
-		c.SetSlowConsumerError(errors.New("bad things happened"))
+		c.AlertSlowConsumerError()
 
 		err := c.PostMetrics()
 		Expect(err).ToNot(HaveOccurred())
@@ -337,7 +336,7 @@ var _ = Describe("DatadogClient", func() {
 	It("unsets the error once it publishes the error to datadog", func() {
 		c := datadogclient.New(ts.URL, "dummykey", "datadog.nozzle.", "test-deployment", "dummy-ip")
 
-		c.SetSlowConsumerError(errors.New("bad things happened"))
+		c.AlertSlowConsumerError()
 
 		err := c.PostMetrics()
 		Expect(err).ToNot(HaveOccurred())

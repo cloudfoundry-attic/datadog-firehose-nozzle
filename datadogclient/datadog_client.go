@@ -23,7 +23,6 @@ type Client struct {
 	ip                    string
 	totalMessagesReceived uint64
 	totalMetricsSent      uint64
-	slowConsumerError     error
 }
 
 type metricKey struct {
@@ -68,8 +67,8 @@ func New(apiURL string, apiKey string, prefix string, deployment string, ip stri
 	}
 }
 
-func (c *Client) SetSlowConsumerError(err error) {
-	c.slowConsumerError = err
+func (c *Client) AlertSlowConsumerError() {
+	c.addInternalMetric("restartsFromSlowNozzle", uint64(1))
 }
 
 func (c *Client) AddMetric(envelope *events.Envelope) {
@@ -134,12 +133,19 @@ func (c *Client) populateInternalMetrics() {
 	c.addInternalMetric("totalMessagesReceived", c.totalMessagesReceived)
 	c.addInternalMetric("totalMetricsSent", c.totalMetricsSent)
 
-	if c.slowConsumerError != nil {
-		c.addInternalMetric("restartsFromSlowNozzle", uint64(1))
-		c.slowConsumerError = nil
-	} else {
+	if !c.containsSlowConsumerAlert() {
 		c.addInternalMetric("restartsFromSlowNozzle", uint64(0))
 	}
+}
+
+func (c *Client) containsSlowConsumerAlert() bool {
+	key := metricKey{
+		name: "restartsFromSlowNozzle",
+		deployment: c.deployment,
+		ip: c.ip,
+	}
+	_, ok := c.metricPoints[key]
+	return ok
 }
 
 func (c *Client) formatMetrics() ([]byte, uint64) {
