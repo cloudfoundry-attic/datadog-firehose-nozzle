@@ -163,7 +163,7 @@ var _ = Describe("Datadog Firehose Nozzle", func() {
 	Context("receives a truncatingbuffer.droppedmessage value metric,", func() {
 		It("sets a slow-consumer error", func() {
 			slowConsumerError := events.Envelope{
-				Origin:    proto.String("DopplerServer"),
+				Origin:    proto.String("doppler"),
 				Timestamp: proto.Int64(1000000000),
 				EventType: events.Envelope_CounterEvent.Enum(),
 				CounterEvent: &events.CounterEvent{
