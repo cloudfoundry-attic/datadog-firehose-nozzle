@@ -167,6 +167,8 @@ var _ = Describe("DatadogFirehoseNozzle", func() {
 
 				Expect(metric.Points).To(HaveLen(1))
 				Expect(metric.Points[0].Value).To(Equal(0.0))
+			} else if metric.Metric == "restartsFromSlowNozzle" {
+
 			} else {
 				panic("Unknown metric " + metric.Metric)
 			}

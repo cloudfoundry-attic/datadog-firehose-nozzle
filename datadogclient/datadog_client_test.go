@@ -66,7 +66,7 @@ var _ = Describe("DatadogClient", func() {
 		var payload datadogclient.Payload
 		err = json.Unmarshal(bodies[0], &payload)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(payload.Series).To(HaveLen(2))
+		Expect(payload.Series).To(HaveLen(3))
 
 		validateMetrics(payload, 2, 0)
 	})
@@ -81,7 +81,7 @@ var _ = Describe("DatadogClient", func() {
 		var payload datadogclient.Payload
 		err = json.Unmarshal(bodies[0], &payload)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(payload.Series).To(HaveLen(2))
+		Expect(payload.Series).To(HaveLen(3))
 
 		validateMetrics(payload, 0, 0)
 
@@ -91,9 +91,9 @@ var _ = Describe("DatadogClient", func() {
 		Eventually(bodies).Should(HaveLen(2))
 		err = json.Unmarshal(bodies[1], &payload)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(payload.Series).To(HaveLen(2))
+		Expect(payload.Series).To(HaveLen(3))
 
-		validateMetrics(payload, 0, 2)
+		validateMetrics(payload, 0, 3)
 	})
 
 	It("posts ValueMetrics in JSON format", func() {
@@ -131,7 +131,7 @@ var _ = Describe("DatadogClient", func() {
 		var payload datadogclient.Payload
 		err = json.Unmarshal(bodies[0], &payload)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(payload.Series).To(HaveLen(3))
+		Expect(payload.Series).To(HaveLen(4))
 
 		metricFound := false
 		for _, metric := range payload.Series {
@@ -192,7 +192,7 @@ var _ = Describe("DatadogClient", func() {
 		var payload datadogclient.Payload
 		err = json.Unmarshal(bodies[0], &payload)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(payload.Series).To(HaveLen(4))
+		Expect(payload.Series).To(HaveLen(5))
 		dopplerFound := false
 		gorouterFound := false
 		for _, metric := range payload.Series {
@@ -260,7 +260,7 @@ var _ = Describe("DatadogClient", func() {
 		var payload datadogclient.Payload
 		err = json.Unmarshal(bodies[0], &payload)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(payload.Series).To(HaveLen(3))
+		Expect(payload.Series).To(HaveLen(4))
 		counterNameFound := false
 		for _, metric := range payload.Series {
 			Expect(metric.Type).To(Equal("gauge"))
@@ -289,12 +289,12 @@ var _ = Describe("DatadogClient", func() {
 
 		err = json.Unmarshal(bodies[1], &payload)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(payload.Series).To(HaveLen(2))
+		Expect(payload.Series).To(HaveLen(3))
 
-		validateMetrics(payload, 2, 3)
+		validateMetrics(payload, 2, 4)
 	})
 
-	It("sends an error metric when consumer error is set", func() {
+	It("sends a value 1 for the restartsFromSlowNozzle metric when consumer error is set", func() {
 		c := datadogclient.New(ts.URL, "dummykey", "datadog.nozzle.", "test-deployment", "dummy-ip")
 
 		c.SetSlowConsumerError(errors.New("bad things happened"))
@@ -315,7 +315,26 @@ var _ = Describe("DatadogClient", func() {
 		Expect(errMetric.Points[0].Value).To(BeEquivalentTo(1))
 	})
 
-	It("only sends an error metric once", func() {
+	It("sends a value 0 for the restartsFromSlowNozzle metric when consumer error is not set", func() {
+		c := datadogclient.New(ts.URL, "dummykey", "datadog.nozzle.", "test-deployment", "dummy-ip")
+
+		err := c.PostMetrics()
+		Expect(err).ToNot(HaveOccurred())
+
+		Eventually(bodies).Should(HaveLen(1))
+		var payload datadogclient.Payload
+		err = json.Unmarshal(bodies[0], &payload)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(payload.Series).To(HaveLen(3))
+
+		errMetric := findSlowConsumerMetric(payload)
+		Expect(errMetric).NotTo(BeNil())
+		Expect(errMetric.Type).To(Equal("gauge"))
+		Expect(errMetric.Points).To(HaveLen(1))
+		Expect(errMetric.Points[0].Value).To(BeEquivalentTo(0))
+	})
+
+	It("unsets the error once it publishes the error to datadog", func() {
 		c := datadogclient.New(ts.URL, "dummykey", "datadog.nozzle.", "test-deployment", "dummy-ip")
 
 		c.SetSlowConsumerError(errors.New("bad things happened"))
@@ -328,7 +347,9 @@ var _ = Describe("DatadogClient", func() {
 		err = json.Unmarshal(bodies[0], &payload)
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(findSlowConsumerMetric(payload)).NotTo(BeNil())
+		errMetric := findSlowConsumerMetric(payload)
+		Expect(errMetric).NotTo(BeNil())
+		Expect(errMetric.Points[0].Value).To(BeEquivalentTo(1))
 
 		err = c.PostMetrics()
 		Expect(err).ToNot(HaveOccurred())
@@ -337,7 +358,9 @@ var _ = Describe("DatadogClient", func() {
 		err = json.Unmarshal(bodies[1], &payload)
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(findSlowConsumerMetric(payload)).To(BeNil())
+		errMetric = findSlowConsumerMetric(payload)
+		Expect(findSlowConsumerMetric(payload)).ToNot(BeNil())
+		Expect(errMetric.Points[0].Value).To(BeEquivalentTo(0))
 	})
 
 })

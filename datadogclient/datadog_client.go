@@ -143,6 +143,8 @@ func (c *Client) formatMetrics() ([]byte, uint64) {
 	if c.slowConsumerError != nil {
 		metrics = c.addInternalMetric(metrics, "restartsFromSlowNozzle", uint64(1))
 		c.slowConsumerError = nil
+	} else {
+		metrics = c.addInternalMetric(metrics, "restartsFromSlowNozzle", uint64(0))
 	}
 
 	encodedMetric, _ := json.Marshal(Payload{Series: metrics})

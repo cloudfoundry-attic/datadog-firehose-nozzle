@@ -91,8 +91,8 @@ var _ = Describe("Datadog Firehose Nozzle", func() {
 
 		Expect(logOutput).ToNot(gbytes.Say("Error while reading from the firehose"))
 
-		// +2 internal metrics that show totalMessagesReceived and totalMetricSent
-		Expect(payload.Series).To(HaveLen(12))
+		// +3 internal metrics that show totalMessagesReceived, totalMetricSent, and restartsFromSlowNozzle
+		Expect(payload.Series).To(HaveLen(13))
 
 	}, 2)
 
@@ -147,7 +147,9 @@ var _ = Describe("Datadog Firehose Nozzle", func() {
 		err := json.Unmarshal(contents, &payload)
 		Expect(err).ToNot(HaveOccurred())
 
-		Expect(findSlowConsumerMetric(payload)).To(BeNil())
+		errMetric := findSlowConsumerMetric(payload)
+		Expect(errMetric).NotTo(BeNil())
+		Expect(errMetric.Points[0].Value).To(BeEquivalentTo(0))
 
 		Expect(logOutput).To(gbytes.Say("Error while reading from the firehose"))
 		Expect(logOutput).NotTo(gbytes.Say("Client did not respond to ping before keep-alive timeout expired."))
