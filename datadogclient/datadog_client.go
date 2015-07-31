@@ -140,9 +140,9 @@ func (c *Client) populateInternalMetrics() {
 
 func (c *Client) containsSlowConsumerAlert() bool {
 	key := metricKey{
-		name: "slowConsumerAlert",
+		name:       "slowConsumerAlert",
 		deployment: c.deployment,
-		ip: c.ip,
+		ip:         c.ip,
 	}
 	_, ok := c.metricPoints[key]
 	return ok
@@ -165,14 +165,14 @@ func (c *Client) formatMetrics() ([]byte, uint64) {
 
 func (c *Client) addInternalMetric(name string, value uint64) {
 	key := metricKey{
-		name: name,
+		name:       name,
 		deployment: c.deployment,
-		ip: c.ip,
+		ip:         c.ip,
 	}
 
 	point := Point{
 		Timestamp: time.Now().Unix(),
-		Value: float64(value),
+		Value:     float64(value),
 	}
 
 	mValue := metricValue{
@@ -180,7 +180,7 @@ func (c *Client) addInternalMetric(name string, value uint64) {
 			fmt.Sprintf("ip:%s", c.ip),
 			fmt.Sprintf("deployment:%s", c.deployment),
 		},
-		points: []Point{ point },
+		points: []Point{point},
 	}
 
 	c.metricPoints[key] = mValue
