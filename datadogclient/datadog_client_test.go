@@ -17,6 +17,7 @@ import (
 )
 
 var bodies [][]byte
+var responseCode int
 
 var _ = Describe("DatadogClient", func() {
 
@@ -24,6 +25,7 @@ var _ = Describe("DatadogClient", func() {
 
 	BeforeEach(func() {
 		bodies = nil
+		responseCode = http.StatusOK
 		ts = httptest.NewServer(http.HandlerFunc(handlePost))
 	})
 
@@ -333,7 +335,7 @@ var _ = Describe("DatadogClient", func() {
 		Expect(errMetric.Points[0].Value).To(BeEquivalentTo(0))
 	})
 
-	It("unsets the error once it publishes the error to datadog", func() {
+	It("unsets the slow consumer error once it publishes the alert to datadog", func() {
 		c := datadogclient.New(ts.URL, "dummykey", "datadog.nozzle.", "test-deployment", "dummy-ip")
 
 		c.AlertSlowConsumerError()
@@ -360,6 +362,25 @@ var _ = Describe("DatadogClient", func() {
 		errMetric = findSlowConsumerMetric(payload)
 		Expect(findSlowConsumerMetric(payload)).ToNot(BeNil())
 		Expect(errMetric.Points[0].Value).To(BeEquivalentTo(0))
+	})
+
+	It("returns an error when datadog responds with a non 200 response code", func() {
+
+		c := datadogclient.New(ts.URL, "dummykey", "datadog.nozzle.", "test-deployment", "dummy-ip")
+		responseCode = http.StatusBadRequest // 400
+		err := c.PostMetrics()
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("datadog request returned HTTP response: 400 Bad Request"))
+
+		responseCode = http.StatusSwitchingProtocols // 101
+		err = c.PostMetrics()
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("datadog request returned HTTP response: 101"))
+
+		responseCode = http.StatusAccepted // 201
+		err = c.PostMetrics()
+		Expect(err).ToNot(HaveOccurred())
+
 	})
 
 })
@@ -402,6 +423,7 @@ func handlePost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	bodies = append(bodies, body)
+	w.WriteHeader(responseCode)
 }
 
 func findSlowConsumerMetric(payload datadogclient.Payload) *datadogclient.Metric {

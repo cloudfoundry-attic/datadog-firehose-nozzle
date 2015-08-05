@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"time"
 
 	"errors"
 	"github.com/cloudfoundry/sonde-go/events"
+	"log"
 )
 
 const DefaultAPIURL = "https://app.datadoghq.com/api/v1"
@@ -99,12 +99,12 @@ func (c *Client) AddMetric(envelope *events.Envelope) {
 }
 
 func (c *Client) PostMetrics() error {
-	numMetrics := len(c.metricPoints)
-	log.Printf("Posting %d metrics", numMetrics)
-
 	url := c.seriesURL()
 
 	c.populateInternalMetrics()
+	numMetrics := len(c.metricPoints)
+	log.Printf("Posting %d metrics", numMetrics)
+
 	seriesBytes, metricsCount := c.formatMetrics()
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(seriesBytes))
@@ -115,7 +115,7 @@ func (c *Client) PostMetrics() error {
 
 	defer resp.Body.Close()
 	if resp.StatusCode >= 300 || resp.StatusCode < 200 {
-		return fmt.Errorf("datadog request returned HTTP status code: %v", resp.StatusCode)
+		return fmt.Errorf("datadog request returned HTTP response: %s", resp.Status)
 	}
 
 	c.totalMetricsSent += metricsCount

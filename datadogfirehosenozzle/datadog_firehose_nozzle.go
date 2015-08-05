@@ -44,10 +44,11 @@ func (d *DatadogFirehoseNozzle) Start() {
 		authToken = d.authTokenFetcher.FetchAuthToken()
 	}
 
+	log.Print("Starting DataDog Firehose Nozzle...")
 	d.createClient()
-
 	d.consumeFirehose(authToken)
 	d.postToDatadog()
+	log.Print("DataDog Firehose Nozzle shutting down...")
 }
 
 func (d *DatadogFirehoseNozzle) createClient() {
@@ -64,7 +65,6 @@ func (d *DatadogFirehoseNozzle) consumeFirehose(authToken string) {
 		d.config.TrafficControllerURL,
 		&tls.Config{InsecureSkipVerify: d.config.InsecureSSLSkipVerify},
 		nil)
-
 	go d.consumer.Firehose(d.config.FirehoseSubscriptionID, authToken, d.messages, d.errs)
 }
 
@@ -101,6 +101,7 @@ func (d *DatadogFirehoseNozzle) handleError(err error) {
 		d.client.AlertSlowConsumerError()
 	}
 
+	log.Printf("Closing connection with traffic controller due to %v", err)
 	d.consumer.Close()
 	d.postMetrics()
 }
