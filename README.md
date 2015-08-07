@@ -1,4 +1,4 @@
-### Summary
+## Summary
 [![Build Status](https://travis-ci.org/cloudfoundry-incubator/datadog-firehose-nozzle.svg?branch=master)](https://travis-ci.org/cloudfoundry-incubator/datadog-firehose-nozzle) [![Coverage Status](https://coveralls.io/repos/cloudfoundry-incubator/datadog-firehose-nozzle/badge.svg)](https://coveralls.io/r/cloudfoundry-incubator/datadog-firehose-nozzle)
 
 The datadog-firehose-nozzle is a CF component which forwards metrics from the Loggregator Firehose to [Datadog](http://www.datadoghq.com/)
@@ -53,3 +53,54 @@ You need [ginkgo](http://onsi.github.io/ginkgo/) to run the tests. The tests can
 ginkgo -r
 
 ```
+
+## Deploying
+
+### [Bosh](http://bosh.io)
+
+There is a bosh release that will configure, start and monitor the datadog nozzle:
+[https://github.com/cloudfoundry-incubator/datadog-firehose-nozzle-release](https://github.com/cloudfoundry-incubator/datadog-firehose-nozzle-release
+)
+
+### [Lattice](http://lattice.cf)
+
+There is a docker image which can be used to deploy the datadog nozzle to lattice.
+If you are running lattice locally with Vagrant, you can use the following command
+line to start the nozzle:
+
+```bash
+ltc create datadog-nozzle cloudfoundry/datadog-nozzle-lattice \
+  -e NOZZLE_DATADOGAPIKEY=<API KEY> \
+  -e NOZZLE_METRICPREFIX=<METRIC PREFIX>  --no-monitor
+```
+
+The `API KEY` is your datadog API key used to publish metrics. The `METRIC PREFIX` gets prepended to all metric names
+going through the nozzle.
+
+The docker image runs the nozzle with the config provided in [`lattice/lattice-datadog-firehose-nozzle.json`](https://github.com/cloudfoundry-incubator/datadog-firehose-nozzle/blob/master/lattice/lattice-datadog-firehose-nozzle.json).
+If you are not running lattice locally you will have to also configure the traffic controller URL
+
+```bash
+ltc create datadog-nozzle cloudfoundry/datadog-nozzle-lattice \
+  -e NOZZLE_DATADOGAPIKEY=<API KEY> \
+  -e NOZZLE_METRIC_PREFIX=<METRIC PREFIX> \
+  -e NOZZLE_TRAFFICCONTROLLERURL=<TRAFFICONTROLLER URL>
+```
+
+Any of the configuration parameters can be overloaded by using environment variables. The following
+parameters are supported
+
+| Environment variable          | Description            |
+|-------------------------------|------------------------|
+| NOZZLE_UAAURL                 | UAA URL which the nozzle uses to get an authentication token for the firehose |
+| NOZZLE_USERNAME               | User who has access to the firehose |
+| NOZZLE_PASSWORD               | Password for the user |
+| NOZZLE_TRAFFICCONTROLLERURL   | Loggregator's traffic controller URL |
+| NOZZLE_FIREHOSESUBSCRIPTIONID | Subscription ID used when connecting to the firehose. Nozzles with the same subscription ID get a proportional share of the firehose |
+| NOZZLE_DATADOGURL             | The Datadog API URL |
+| NOZZLE_DATADOGAPIKEY          | The API key used when publishing metrics to datadog |
+| NOZZLE_METRICPREFIX           | The metric prefix is prepended to all metrics flowing through the nozzle |
+| NOZZLE_DEPLOYMENT             | The deployment name for the nozzle. Used for tagging metrics internal to the nozzle |
+| NOZZLE_FLUSHDURATIONSECONDS   | Number of seconds to buffer data before publishing to Datadog |
+| NOZZLE_INSECURESSLSKIPVERIFY  | If true, allows insecure connections to the UAA and the Trafficcontroller |
+| NOZZLE_DISABLEACCESSCONTROL   | If true, disables authentication with the UAA. Used in lattice deployments |
