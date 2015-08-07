@@ -2,57 +2,43 @@ package integration_test
 
 import (
 	"encoding/json"
-	"io/ioutil"
-	"net/http"
 	"os/exec"
-	"time"
 
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
-	"github.com/gorilla/websocket"
-
-	"log"
 
 	"github.com/cloudfoundry-incubator/datadog-firehose-nozzle/datadogclient"
+	. "github.com/cloudfoundry-incubator/datadog-firehose-nozzle/testhelpers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
-)
-
-var (
-	fakeFirehoseInputChan chan *events.Envelope
-	fakeDDChan            chan []byte
+	"os"
+	"strings"
 )
 
 var _ = Describe("DatadogFirehoseNozzle", func() {
 	var (
-		fakeUAA      *http.Server
-		fakeFirehose *http.Server
-		fakeDatadog  *http.Server
+		fakeUAA        *FakeUAA
+		fakeFirehose   *FakeFirehose
+		fakeDatadogAPI *FakeDatadogAPI
 
 		nozzleSession *gexec.Session
 	)
 
 	BeforeEach(func() {
-		fakeFirehoseInputChan = make(chan *events.Envelope)
-		fakeDDChan = make(chan []byte)
+		fakeUAA = NewFakeUAA("bearer", "123456789")
+		fakeToken := fakeUAA.AuthToken()
+		fakeFirehose = NewFakeFirehose(fakeToken)
+		fakeDatadogAPI = NewFakeDatadogAPI()
 
-		fakeUAA = &http.Server{
-			Addr:    ":8084",
-			Handler: http.HandlerFunc(fakeUAAHandler),
-		}
-		fakeFirehose = &http.Server{
-			Addr:    ":8086",
-			Handler: http.HandlerFunc(fakeFirehoseHandler),
-		}
-		fakeDatadog = &http.Server{
-			Addr:    ":8087",
-			Handler: http.HandlerFunc(fakeDatadogHandler),
-		}
+		fakeUAA.Start()
+		fakeFirehose.Start()
+		fakeDatadogAPI.Start()
 
-		go fakeUAA.ListenAndServe()
-		go fakeFirehose.ListenAndServe()
-		go fakeDatadog.ListenAndServe()
+		os.Setenv("NOZZLE_FLUSHDURATIONSECONDS", "2")
+		os.Setenv("NOZZLE_UAAURL", fakeUAA.URL())
+		os.Setenv("NOZZLE_DATADOGURL", fakeDatadogAPI.URL())
+		os.Setenv("NOZZLE_TRAFFICCONTROLLERURL", strings.Replace(fakeFirehose.URL(), "http:", "ws:", 1))
 
 		var err error
 		nozzleCommand := exec.Command(pathToNozzleExecutable, "-config", "fixtures/test-config.json")
@@ -65,11 +51,15 @@ var _ = Describe("DatadogFirehoseNozzle", func() {
 	})
 
 	AfterEach(func() {
+		fakeUAA.Close()
+		fakeFirehose.Close()
+		fakeDatadogAPI.Close()
 		nozzleSession.Kill().Wait()
 	})
 
 	It("forwards metrics in a batch", func(done Done) {
-		fakeFirehoseInputChan <- &events.Envelope{
+
+		fakeFirehose.AddEvent(events.Envelope{
 			Origin:    proto.String("origin"),
 			Timestamp: proto.Int64(1000000000),
 			EventType: events.Envelope_ValueMetric.Enum(),
@@ -80,9 +70,9 @@ var _ = Describe("DatadogFirehoseNozzle", func() {
 			},
 			Deployment: proto.String("deployment-name"),
 			Job:        proto.String("doppler"),
-		}
+		})
 
-		fakeFirehoseInputChan <- &events.Envelope{
+		fakeFirehose.AddEvent(events.Envelope{
 			Origin:    proto.String("origin"),
 			Timestamp: proto.Int64(2000000000),
 			EventType: events.Envelope_ValueMetric.Enum(),
@@ -93,9 +83,9 @@ var _ = Describe("DatadogFirehoseNozzle", func() {
 			},
 			Deployment: proto.String("deployment-name"),
 			Job:        proto.String("gorouter"),
-		}
+		})
 
-		fakeFirehoseInputChan <- &events.Envelope{
+		fakeFirehose.AddEvent(events.Envelope{
 			Origin:    proto.String("origin"),
 			Timestamp: proto.Int64(3000000000),
 			EventType: events.Envelope_CounterEvent.Enum(),
@@ -106,13 +96,11 @@ var _ = Describe("DatadogFirehoseNozzle", func() {
 			},
 			Deployment: proto.String("deployment-name"),
 			Job:        proto.String("doppler"),
-		}
-
-		close(fakeFirehoseInputChan)
+		})
 
 		// eventually receive a batch from fake DD
 		var messageBytes []byte
-		Eventually(fakeDDChan, "2s").Should(Receive(&messageBytes))
+		Eventually(fakeDatadogAPI.ReceivedContents, "2s").Should(Receive(&messageBytes))
 
 		// Break JSON blob into a list of blobs, one for each metric
 		var payload datadogclient.Payload
@@ -177,50 +165,3 @@ var _ = Describe("DatadogFirehoseNozzle", func() {
 		close(done)
 	}, 2.0)
 })
-
-func fakeUAAHandler(rw http.ResponseWriter, r *http.Request) {
-	defer r.Body.Close()
-	rw.Write([]byte(`
-		{
-			"token_type": "bearer",
-			"access_token": "good-token"
-		}
-	`))
-}
-
-func fakeFirehoseHandler(rw http.ResponseWriter, r *http.Request) {
-	defer GinkgoRecover()
-	authorization := r.Header.Get("Authorization")
-
-	if authorization != "bearer good-token" {
-		log.Printf("Bad token passed to firehose: %s", authorization)
-		rw.WriteHeader(403)
-		r.Body.Close()
-		return
-	}
-
-	upgrader := websocket.Upgrader{
-		CheckOrigin: func(*http.Request) bool { return true },
-	}
-
-	ws, _ := upgrader.Upgrade(rw, r, nil)
-
-	defer ws.Close()
-	defer ws.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""), time.Time{})
-
-	for envelope := range fakeFirehoseInputChan {
-		buffer, err := proto.Marshal(envelope)
-		Expect(err).NotTo(HaveOccurred())
-		err = ws.WriteMessage(websocket.BinaryMessage, buffer)
-		Expect(err).NotTo(HaveOccurred())
-	}
-}
-
-func fakeDatadogHandler(rw http.ResponseWriter, r *http.Request) {
-	contents, _ := ioutil.ReadAll(r.Body)
-	defer r.Body.Close()
-
-	go func() {
-		fakeDDChan <- contents
-	}()
-}
