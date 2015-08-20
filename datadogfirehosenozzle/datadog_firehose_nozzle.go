@@ -8,10 +8,8 @@ import (
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gorilla/websocket"
 	"github.com/pivotal-golang/localip"
-	"io"
 	"log"
-	"strconv"
-	"strings"
+	"reflect"
 	"time"
 )
 
@@ -92,13 +90,20 @@ func (d *DatadogFirehoseNozzle) postMetrics() {
 }
 
 func (d *DatadogFirehoseNozzle) handleError(err error) {
-	if err != io.EOF {
+	if reflect.TypeOf(err).String() == "*websocket.CloseError" {
+		closeErr := err.(*websocket.CloseError)
+		switch closeErr.Code {
+		case websocket.CloseNormalClosure:
+			// no op
+		case websocket.CloseInternalServerErr:
+			log.Printf("Error while reading from the firehose: %v", err)
+			log.Printf("Disconnected because nozzle couldn't keep up. Please try scaling up the nozzle.")
+			d.client.AlertSlowConsumerError()
+		default:
+			log.Printf("Error while reading from the firehose: %v", err)
+		}
+	} else {
 		log.Printf("Error while reading from the firehose: %v", err)
-	}
-
-	if isCloseError(err) {
-		log.Printf("Disconnected because nozzle couldn't keep up. Please try scaling up the nozzle.")
-		d.client.AlertSlowConsumerError()
 	}
 
 	log.Printf("Closing connection with traffic controller due to %v", err)
@@ -111,9 +116,4 @@ func (d *DatadogFirehoseNozzle) handleMessage(envelope *events.Envelope) {
 		log.Printf("We've intercepted an upstream message which indicates that the nozzle or the TrafficController is not keeping up. Please try scaling up the nozzle.")
 		d.client.AlertSlowConsumerError()
 	}
-}
-
-func isCloseError(err error) bool {
-	errorMsg := "websocket: close " + strconv.Itoa(websocket.CloseInternalServerErr)
-	return strings.Contains(err.Error(), errorMsg)
 }
