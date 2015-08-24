@@ -115,7 +115,7 @@ var _ = Describe("Datadog Firehose Nozzle", func() {
 			fakeFirehose.AddEvent(envelope)
 		}
 
-		fakeFirehose.SetCloseMessage(websocket.FormatCloseMessage(websocket.CloseInternalServerErr, "Client did not respond to ping before keep-alive timeout expired."))
+		fakeFirehose.SetCloseMessage(websocket.FormatCloseMessage(websocket.ClosePolicyViolation, "Client did not respond to ping before keep-alive timeout expired."))
 
 		go nozzle.Start()
 

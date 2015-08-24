@@ -95,7 +95,7 @@ func (d *DatadogFirehoseNozzle) handleError(err error) {
 		switch closeErr.Code {
 		case websocket.CloseNormalClosure:
 			// no op
-		case websocket.CloseInternalServerErr:
+		case websocket.ClosePolicyViolation:
 			log.Printf("Error while reading from the firehose: %v", err)
 			log.Printf("Disconnected because nozzle couldn't keep up. Please try scaling up the nozzle.")
 			d.client.AlertSlowConsumerError()
