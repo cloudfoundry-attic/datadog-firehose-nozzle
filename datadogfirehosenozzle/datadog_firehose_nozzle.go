@@ -9,7 +9,6 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/pivotal-golang/localip"
 	"log"
-	"reflect"
 	"time"
 )
 
@@ -90,11 +89,11 @@ func (d *DatadogFirehoseNozzle) postMetrics() {
 }
 
 func (d *DatadogFirehoseNozzle) handleError(err error) {
-	if reflect.TypeOf(err).String() == "*websocket.CloseError" {
-		closeErr := err.(*websocket.CloseError)
+	switch closeErr := err.(type) {
+	case *websocket.CloseError:
 		switch closeErr.Code {
 		case websocket.CloseNormalClosure:
-			// no op
+		// no op
 		case websocket.ClosePolicyViolation:
 			log.Printf("Error while reading from the firehose: %v", err)
 			log.Printf("Disconnected because nozzle couldn't keep up. Please try scaling up the nozzle.")
@@ -102,8 +101,9 @@ func (d *DatadogFirehoseNozzle) handleError(err error) {
 		default:
 			log.Printf("Error while reading from the firehose: %v", err)
 		}
-	} else {
+	default:
 		log.Printf("Error while reading from the firehose: %v", err)
+
 	}
 
 	log.Printf("Closing connection with traffic controller due to %v", err)
