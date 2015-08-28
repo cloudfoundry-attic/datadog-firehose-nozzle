@@ -26,7 +26,7 @@ The datadog nozzle uses a configuration file to obtain the firehose URL, datadog
 
 You can start the firehose nozzle by executing:
 ```
-go run main.go -config config/datadog-firehose-nozzle.json"
+godep go run main.go -config config/datadog-firehose-nozzle.json"
 ```
 
 ### Batching
