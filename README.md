@@ -104,3 +104,6 @@ parameters are supported
 | NOZZLE_FLUSHDURATIONSECONDS   | Number of seconds to buffer data before publishing to Datadog |
 | NOZZLE_INSECURESSLSKIPVERIFY  | If true, allows insecure connections to the UAA and the Trafficcontroller |
 | NOZZLE_DISABLEACCESSCONTROL   | If true, disables authentication with the UAA. Used in lattice deployments |
+
+### CI
+The concourse pipeline for the datadog nozzle is present here: https://concourse.walnut.cf-app.com/pipelines/nozzles?groups=datadog-nozzle
