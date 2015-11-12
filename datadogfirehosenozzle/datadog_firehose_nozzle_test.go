@@ -17,6 +17,7 @@ import (
 	"github.com/onsi/gomega/gbytes"
 	"log"
 	"strings"
+	"time"
 )
 
 var _ = Describe("Datadog Firehose Nozzle", func() {
@@ -240,6 +241,34 @@ var _ = Describe("Datadog Firehose Nozzle", func() {
 		It("does not rquire the presence of config.UAAURL", func() {
 			nozzle.Start()
 			Consistently(func() int { return tokenFetcher.NumCalls }).Should(Equal(0))
+		})
+	})
+
+	Context("when idle timeout has expired", func() {
+		var fakeIdleFirehose *FakeIdleFirehose
+		BeforeEach(func() {
+			fakeIdleFirehose = NewFakeIdleFirehose(time.Second * 7)
+			fakeIdleFirehose.Start()
+
+			config = &nozzleconfig.NozzleConfig{
+				DataDogURL:           fakeDatadogAPI.URL(),
+				TrafficControllerURL: strings.Replace(fakeIdleFirehose.URL(), "http:", "ws:", 1),
+				DisableAccessControl: true,
+				IdleTimeoutSeconds:   1,
+				FlushDurationSeconds: 1,
+			}
+
+			tokenFetcher := &FakeTokenFetcher{}
+			nozzle = datadogfirehosenozzle.NewDatadogFirehoseNozzle(config, tokenFetcher)
+		})
+		AfterEach(func() {
+			fakeIdleFirehose.Close()
+		})
+
+		It("Start returns an error", func() {
+			err := nozzle.Start()
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("i/o timeout"))
 		})
 	})
 })

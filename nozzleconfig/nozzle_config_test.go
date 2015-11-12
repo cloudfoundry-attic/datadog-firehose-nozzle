@@ -25,6 +25,7 @@ var _ = Describe("NozzleConfig", func() {
 		Expect(conf.MetricPrefix).To(Equal("datadogclient"))
 		Expect(conf.Deployment).To(Equal("deployment-name"))
 		Expect(conf.DisableAccessControl).To(Equal(false))
+		Expect(conf.IdleTimeoutSeconds).To(BeEquivalentTo(60))
 	})
 
 	It("successfully overwrites file config values with environmental variables", func() {
@@ -38,6 +39,7 @@ var _ = Describe("NozzleConfig", func() {
 		os.Setenv("NOZZLE_METRICPREFIX", "env-datadogclient")
 		os.Setenv("NOZZLE_DEPLOYMENT", "env-deployment-name")
 		os.Setenv("NOZZLE_DISABLEACCESSCONTROL", "true")
+		os.Setenv("NOZZLE_IDLETIMEOUTSECONDS", "30")
 
 		conf, err := nozzleconfig.Parse("../config/datadog-firehose-nozzle.json")
 		Expect(err).ToNot(HaveOccurred())
@@ -51,5 +53,6 @@ var _ = Describe("NozzleConfig", func() {
 		Expect(conf.MetricPrefix).To(Equal("env-datadogclient"))
 		Expect(conf.Deployment).To(Equal("env-deployment-name"))
 		Expect(conf.DisableAccessControl).To(Equal(true))
+		Expect(conf.IdleTimeoutSeconds).To(BeEquivalentTo(30))
 	})
 })

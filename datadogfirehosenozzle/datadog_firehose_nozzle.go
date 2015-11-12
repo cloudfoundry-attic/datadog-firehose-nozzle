@@ -34,7 +34,7 @@ func NewDatadogFirehoseNozzle(config *nozzleconfig.NozzleConfig, tokenFetcher Au
 	}
 }
 
-func (d *DatadogFirehoseNozzle) Start() {
+func (d *DatadogFirehoseNozzle) Start() error {
 	var authToken string
 
 	if !d.config.DisableAccessControl {
@@ -44,8 +44,9 @@ func (d *DatadogFirehoseNozzle) Start() {
 	log.Print("Starting DataDog Firehose Nozzle...")
 	d.createClient()
 	d.consumeFirehose(authToken)
-	d.postToDatadog()
+	err := d.postToDatadog()
 	log.Print("DataDog Firehose Nozzle shutting down...")
+	return err
 }
 
 func (d *DatadogFirehoseNozzle) createClient() {
@@ -62,10 +63,11 @@ func (d *DatadogFirehoseNozzle) consumeFirehose(authToken string) {
 		d.config.TrafficControllerURL,
 		&tls.Config{InsecureSkipVerify: d.config.InsecureSSLSkipVerify},
 		nil)
+	d.consumer.SetIdleTimeout(time.Duration(d.config.IdleTimeoutSeconds) * time.Second)
 	go d.consumer.Firehose(d.config.FirehoseSubscriptionID, authToken, d.messages, d.errs)
 }
 
-func (d *DatadogFirehoseNozzle) postToDatadog() {
+func (d *DatadogFirehoseNozzle) postToDatadog() error {
 	ticker := time.NewTicker(time.Duration(d.config.FlushDurationSeconds) * time.Second)
 	for {
 		select {
@@ -76,7 +78,7 @@ func (d *DatadogFirehoseNozzle) postToDatadog() {
 			d.client.AddMetric(envelope)
 		case err := <-d.errs:
 			d.handleError(err)
-			return
+			return err
 		}
 	}
 }

@@ -21,6 +21,7 @@ type NozzleConfig struct {
 	MetricPrefix           string
 	Deployment             string
 	DisableAccessControl   bool
+	IdleTimeoutSeconds     uint32
 }
 
 func Parse(configPath string) (*NozzleConfig, error) {
@@ -49,7 +50,7 @@ func Parse(configPath string) (*NozzleConfig, error) {
 
 	overrideWithEnvBool("NOZZLE_INSECURESSLSKIPVERIFY", &config.InsecureSSLSkipVerify)
 	overrideWithEnvBool("NOZZLE_DISABLEACCESSCONTROL", &config.DisableAccessControl)
-
+	overrideWithEnvUint32("NOZZLE_IDLETIMEOUTSECONDS", &config.IdleTimeoutSeconds)
 	return &config, nil
 }
 

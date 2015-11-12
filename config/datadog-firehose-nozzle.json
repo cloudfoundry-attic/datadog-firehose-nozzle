@@ -10,5 +10,6 @@
   "InsecureSSLSkipVerify": true,
   "MetricPrefix": "datadogclient",
   "Deployment": "deployment-name",
-  "DisableAccessControl": false
+  "DisableAccessControl": false,
+  "IdleTimeoutSeconds" : 60
 }
