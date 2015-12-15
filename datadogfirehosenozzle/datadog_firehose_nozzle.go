@@ -2,14 +2,16 @@ package datadogfirehosenozzle
 
 import (
 	"crypto/tls"
+	"log"
+	"os"
+	"time"
+
 	"github.com/cloudfoundry-incubator/datadog-firehose-nozzle/datadogclient"
 	"github.com/cloudfoundry-incubator/datadog-firehose-nozzle/nozzleconfig"
 	"github.com/cloudfoundry/noaa"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gorilla/websocket"
 	"github.com/pivotal-golang/localip"
-	"log"
-	"time"
 )
 
 type DatadogFirehoseNozzle struct {
@@ -86,7 +88,8 @@ func (d *DatadogFirehoseNozzle) postToDatadog() error {
 func (d *DatadogFirehoseNozzle) postMetrics() {
 	err := d.client.PostMetrics()
 	if err != nil {
-		log.Printf("Error: %s", err.Error())
+		log.Printf("FATAL ERROR: %s\n\n", err)
+		os.Exit(1)
 	}
 }
 
