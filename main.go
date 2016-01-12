@@ -33,6 +33,7 @@ func main() {
 	defer close(threadDumpChan)
 	go dumpGoRoutine(threadDumpChan)
 
+	log.Printf("Targeting datadog API URL: %s \n", config.DataDogURL)
 	datadog_nozzle := datadogfirehosenozzle.NewDatadogFirehoseNozzle(config, tokenFetcher)
 	datadog_nozzle.Start()
 }
