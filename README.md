@@ -83,7 +83,7 @@ If you are not running lattice locally you will have to also configure the traff
 ```bash
 ltc create datadog-nozzle cloudfoundry/datadog-nozzle-lattice \
   -e NOZZLE_DATADOGAPIKEY=<API KEY> \
-  -e NOZZLE_METRIC_PREFIX=<METRIC PREFIX> \
+  -e NOZZLE_METRICPREFIX=<METRIC PREFIX> \
   -e NOZZLE_TRAFFICCONTROLLERURL=<TRAFFICONTROLLER URL>
 ```
 
