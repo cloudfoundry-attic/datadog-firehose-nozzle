@@ -30,8 +30,6 @@ type AuthTokenFetcher interface {
 func NewDatadogFirehoseNozzle(config *nozzleconfig.NozzleConfig, tokenFetcher AuthTokenFetcher) *DatadogFirehoseNozzle {
 	return &DatadogFirehoseNozzle{
 		config:           config,
-		errs:             make(<-chan error),
-		messages:         make(<-chan *events.Envelope),
 		authTokenFetcher: tokenFetcher,
 	}
 }
