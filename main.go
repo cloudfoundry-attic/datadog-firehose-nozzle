@@ -2,22 +2,29 @@ package main
 
 import (
 	"flag"
-	"log"
-
-	"github.com/cloudfoundry-incubator/datadog-firehose-nozzle/datadogfirehosenozzle"
-	"github.com/cloudfoundry-incubator/datadog-firehose-nozzle/nozzleconfig"
-	"github.com/cloudfoundry-incubator/datadog-firehose-nozzle/uaatokenfetcher"
 	"os"
 	"os/signal"
 	"runtime/pprof"
 	"syscall"
+
+	"github.com/cloudfoundry-incubator/datadog-firehose-nozzle/datadogfirehosenozzle"
+	"github.com/cloudfoundry-incubator/datadog-firehose-nozzle/logger"
+	"github.com/cloudfoundry-incubator/datadog-firehose-nozzle/nozzleconfig"
+	"github.com/cloudfoundry-incubator/datadog-firehose-nozzle/uaatokenfetcher"
+)
+
+var (
+	logFilePath = flag.String("logFile", "", "The agent log file, defaults to STDOUT")
+	logLevel    = flag.Bool("debug", false, "Debug logging")
+	configFile  = flag.String("config", "config/datadog-firehose-nozzle.json", "Location of the nozzle config json file")
 )
 
 func main() {
-	configFilePath := flag.String("config", "config/datadog-firehose-nozzle.json", "Location of the nozzle config json file")
 	flag.Parse()
 
-	config, err := nozzleconfig.Parse(*configFilePath)
+	log := logger.NewLogger(*logLevel, *logFilePath, "datadog-firehose-nozzle", "")
+
+	config, err := nozzleconfig.Parse(*configFile)
 	if err != nil {
 		log.Fatalf("Error parsing config: %s", err.Error())
 	}
@@ -33,8 +40,8 @@ func main() {
 	defer close(threadDumpChan)
 	go dumpGoRoutine(threadDumpChan)
 
-	log.Printf("Targeting datadog API URL: %s \n", config.DataDogURL)
-	datadog_nozzle := datadogfirehosenozzle.NewDatadogFirehoseNozzle(config, tokenFetcher)
+	log.Infof("Targeting datadog API URL: %s \n", config.DataDogURL)
+	datadog_nozzle := datadogfirehosenozzle.NewDatadogFirehoseNozzle(config, tokenFetcher, log)
 	datadog_nozzle.Start()
 }
 

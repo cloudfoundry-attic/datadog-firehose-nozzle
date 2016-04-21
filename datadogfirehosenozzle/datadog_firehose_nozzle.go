@@ -2,12 +2,11 @@ package datadogfirehosenozzle
 
 import (
 	"crypto/tls"
-	"log"
-	"os"
 	"time"
 
 	"github.com/cloudfoundry-incubator/datadog-firehose-nozzle/datadogclient"
 	"github.com/cloudfoundry-incubator/datadog-firehose-nozzle/nozzleconfig"
+	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/noaa/consumer"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gorilla/websocket"
@@ -21,16 +20,18 @@ type DatadogFirehoseNozzle struct {
 	authTokenFetcher AuthTokenFetcher
 	consumer         *consumer.Consumer
 	client           *datadogclient.Client
+	log              *gosteno.Logger
 }
 
 type AuthTokenFetcher interface {
 	FetchAuthToken() string
 }
 
-func NewDatadogFirehoseNozzle(config *nozzleconfig.NozzleConfig, tokenFetcher AuthTokenFetcher) *DatadogFirehoseNozzle {
+func NewDatadogFirehoseNozzle(config *nozzleconfig.NozzleConfig, tokenFetcher AuthTokenFetcher, log *gosteno.Logger) *DatadogFirehoseNozzle {
 	return &DatadogFirehoseNozzle{
 		config:           config,
 		authTokenFetcher: tokenFetcher,
+		log:              log,
 	}
 }
 
@@ -41,11 +42,11 @@ func (d *DatadogFirehoseNozzle) Start() error {
 		authToken = d.authTokenFetcher.FetchAuthToken()
 	}
 
-	log.Print("Starting DataDog Firehose Nozzle...")
+	d.log.Info("Starting DataDog Firehose Nozzle...")
 	d.createClient()
 	d.consumeFirehose(authToken)
 	err := d.postToDatadog()
-	log.Print("DataDog Firehose Nozzle shutting down...")
+	d.log.Info("DataDog Firehose Nozzle shutting down...")
 	return err
 }
 
@@ -86,8 +87,7 @@ func (d *DatadogFirehoseNozzle) postToDatadog() error {
 func (d *DatadogFirehoseNozzle) postMetrics() {
 	err := d.client.PostMetrics()
 	if err != nil {
-		log.Printf("FATAL ERROR: %s\n\n", err)
-		os.Exit(1)
+		d.log.Fatalf("FATAL ERROR: %s\n\n", err)
 	}
 }
 
@@ -98,25 +98,25 @@ func (d *DatadogFirehoseNozzle) handleError(err error) {
 		case websocket.CloseNormalClosure:
 		// no op
 		case websocket.ClosePolicyViolation:
-			log.Printf("Error while reading from the firehose: %v", err)
-			log.Printf("Disconnected because nozzle couldn't keep up. Please try scaling up the nozzle.")
+			d.log.Errorf("Error while reading from the firehose: %v", err)
+			d.log.Errorf("Disconnected because nozzle couldn't keep up. Please try scaling up the nozzle.")
 			d.client.AlertSlowConsumerError()
 		default:
-			log.Printf("Error while reading from the firehose: %v", err)
+			d.log.Errorf("Error while reading from the firehose: %v", err)
 		}
 	default:
-		log.Printf("Error while reading from the firehose: %v", err)
+		d.log.Errorf("Error while reading from the firehose: %v", err)
 
 	}
 
-	log.Printf("Closing connection with traffic controller due to %v", err)
+	d.log.Infof("Closing connection with traffic controller due to %v", err)
 	d.consumer.Close()
 	d.postMetrics()
 }
 
 func (d *DatadogFirehoseNozzle) handleMessage(envelope *events.Envelope) {
 	if envelope.GetEventType() == events.Envelope_CounterEvent && envelope.CounterEvent.GetName() == "TruncatingBuffer.DroppedMessages" && envelope.GetOrigin() == "doppler" {
-		log.Printf("We've intercepted an upstream message which indicates that the nozzle or the TrafficController is not keeping up. Please try scaling up the nozzle.")
+		d.log.Infof("We've intercepted an upstream message which indicates that the nozzle or the TrafficController is not keeping up. Please try scaling up the nozzle.")
 		d.client.AlertSlowConsumerError()
 	}
 }
