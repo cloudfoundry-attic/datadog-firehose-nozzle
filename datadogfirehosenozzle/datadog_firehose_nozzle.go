@@ -56,7 +56,14 @@ func (d *DatadogFirehoseNozzle) createClient() {
 		panic(err)
 	}
 
-	d.client = datadogclient.New(d.config.DataDogURL, d.config.DataDogAPIKey, d.config.MetricPrefix, d.config.Deployment, ipAddress)
+	d.client = datadogclient.New(
+		d.config.DataDogURL,
+		d.config.DataDogAPIKey,
+		d.config.MetricPrefix,
+		d.config.Deployment,
+		ipAddress,
+		d.log,
+	)
 }
 
 func (d *DatadogFirehoseNozzle) consumeFirehose(authToken string) {

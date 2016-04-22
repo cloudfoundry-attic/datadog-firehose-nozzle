@@ -8,8 +8,9 @@ import (
 	"time"
 
 	"errors"
+
+	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/sonde-go/events"
-	"log"
 )
 
 const DefaultAPIURL = "https://app.datadoghq.com/api/v1"
@@ -23,6 +24,7 @@ type Client struct {
 	ip                    string
 	totalMessagesReceived uint64
 	totalMetricsSent      uint64
+	log                   *gosteno.Logger
 }
 
 type metricKey struct {
@@ -56,7 +58,7 @@ type Point struct {
 	Value     float64
 }
 
-func New(apiURL string, apiKey string, prefix string, deployment string, ip string) *Client {
+func New(apiURL string, apiKey string, prefix string, deployment string, ip string, log *gosteno.Logger) *Client {
 	return &Client{
 		apiURL:       apiURL,
 		apiKey:       apiKey,
@@ -64,6 +66,7 @@ func New(apiURL string, apiKey string, prefix string, deployment string, ip stri
 		prefix:       prefix,
 		deployment:   deployment,
 		ip:           ip,
+		log:          log,
 	}
 }
 
@@ -103,7 +106,7 @@ func (c *Client) PostMetrics() error {
 
 	c.populateInternalMetrics()
 	numMetrics := len(c.metricPoints)
-	log.Printf("Posting %d metrics", numMetrics)
+	c.log.Infof("Posting %d metrics", numMetrics)
 
 	seriesBytes, metricsCount := c.formatMetrics()
 
