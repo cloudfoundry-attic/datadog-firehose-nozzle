@@ -43,10 +43,6 @@ var _ = Describe("Datadog Firehose Nozzle", func() {
 		fakeFirehose.Start()
 		fakeDatadogAPI.Start()
 
-		tokenFetcher := &uaatokenfetcher.UAATokenFetcher{
-			UaaUrl: fakeUAA.URL(),
-		}
-
 		config = &nozzleconfig.NozzleConfig{
 			UAAURL:               fakeUAA.URL(),
 			FlushDurationSeconds: 10,
@@ -65,6 +61,7 @@ var _ = Describe("Datadog Firehose Nozzle", func() {
 		}
 		gosteno.Init(c)
 		log = gosteno.NewLogger("test")
+		tokenFetcher := uaatokenfetcher.New(fakeUAA.URL(), "un", "pwd", true, log)
 		nozzle = datadogfirehosenozzle.NewDatadogFirehoseNozzle(config, tokenFetcher, log)
 	})
 
