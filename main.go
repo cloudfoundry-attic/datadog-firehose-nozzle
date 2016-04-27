@@ -29,7 +29,13 @@ func main() {
 		log.Fatalf("Error parsing config: %s", err.Error())
 	}
 
-	tokenFetcher := uaatokenfetcher.New(config.UAAURL, config.Username, config.Password, config.InsecureSSLSkipVerify, log)
+	tokenFetcher := uaatokenfetcher.New(
+		config.UAAURL,
+		config.Username,
+		config.Password,
+		config.InsecureSSLSkipVerify,
+		log,
+	)
 
 	threadDumpChan := registerGoRoutineDumpSignalChannel()
 	defer close(threadDumpChan)
