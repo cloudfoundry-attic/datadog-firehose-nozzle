@@ -22,16 +22,16 @@ var (
 )
 
 var _ = Describe("DatadogClient", func() {
-	var ts *httptest.Server
+	var (
+		ts *httptest.Server
+		c  *datadogclient.Client
+	)
 
 	BeforeEach(func() {
 		bodies = nil
 		responseCode = http.StatusOK
 		ts = httptest.NewServer(http.HandlerFunc(handlePost))
-	})
-
-	It("ignores messages that aren't value metrics or counter events", func() {
-		c := datadogclient.New(
+		c = datadogclient.New(
 			ts.URL,
 			"dummykey",
 			"datadog.nozzle.",
@@ -39,7 +39,49 @@ var _ = Describe("DatadogClient", func() {
 			"dummy-ip",
 			gosteno.NewLogger("datadogclient test"),
 		)
+	})
 
+	It("sends tags", func() {
+		c.AddMetric(&events.Envelope{
+			Origin:    proto.String("test-origin"),
+			Timestamp: proto.Int64(1000000000),
+			EventType: events.Envelope_ValueMetric.Enum(),
+
+			// fields that gets sent as tags
+			Deployment: proto.String("deployment-name"),
+			Job:        proto.String("doppler"),
+			Index:      proto.String("1"),
+			Ip:         proto.String("10.0.1.2"),
+
+			// additional tags
+			Tags: map[string]string{
+				"protocol":   "http",
+				"request_id": "a1f5-deadbeef",
+			},
+		})
+
+		err := c.PostMetrics()
+		Expect(err).ToNot(HaveOccurred())
+
+		Eventually(bodies).Should(HaveLen(1))
+		var payload datadogclient.Payload
+		err = json.Unmarshal(bodies[0], &payload)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(payload.Series).To(HaveLen(4))
+
+		var metric datadogclient.Metric
+		Expect(payload.Series).To(ContainMetric("datadog.nozzle.test-origin.", &metric))
+		Expect(metric.Tags).To(ConsistOf(
+			"deployment:deployment-name",
+			"job:doppler",
+			"index:1",
+			"ip:10.0.1.2",
+			"protocol:http",
+			"request_id:a1f5-deadbeef",
+		))
+	})
+
+	It("ignores messages that aren't value metrics or counter events", func() {
 		c.AddMetric(&events.Envelope{
 			Origin:    proto.String("origin"),
 			Timestamp: proto.Int64(1000000000),
@@ -81,15 +123,6 @@ var _ = Describe("DatadogClient", func() {
 	})
 
 	It("generates aggregate messages even when idle", func() {
-		c := datadogclient.New(
-			ts.URL,
-			"dummykey",
-			"datadog.nozzle.",
-			"test-deployment",
-			"dummy-ip",
-			gosteno.NewLogger("datadogclient test"),
-		)
-
 		err := c.PostMetrics()
 		Expect(err).ToNot(HaveOccurred())
 
@@ -113,15 +146,6 @@ var _ = Describe("DatadogClient", func() {
 	})
 
 	It("posts ValueMetrics in JSON format", func() {
-		c := datadogclient.New(
-			ts.URL,
-			"dummykey",
-			"datadog.nozzle.",
-			"test-deployment",
-			"dummy-ip",
-			gosteno.NewLogger("datadogclient test"),
-		)
-
 		c.AddMetric(&events.Envelope{
 			Origin:    proto.String("origin"),
 			Timestamp: proto.Int64(1000000000),
@@ -181,15 +205,6 @@ var _ = Describe("DatadogClient", func() {
 	})
 
 	It("registers metrics with the same name but different tags as different", func() {
-		c := datadogclient.New(
-			ts.URL,
-			"dummykey",
-			"datadog.nozzle.",
-			"test-deployment",
-			"dummy-ip",
-			gosteno.NewLogger("datadogclient test"),
-		)
-
 		c.AddMetric(&events.Envelope{
 			Origin:    proto.String("origin"),
 			Timestamp: proto.Int64(1000000000),
@@ -258,15 +273,6 @@ var _ = Describe("DatadogClient", func() {
 	})
 
 	It("posts CounterEvents in JSON format and empties map after post", func() {
-		c := datadogclient.New(
-			ts.URL,
-			"dummykey",
-			"datadog.nozzle.",
-			"test-deployment",
-			"dummy-ip",
-			gosteno.NewLogger("datadogclient test"),
-		)
-
 		c.AddMetric(&events.Envelope{
 			Origin:    proto.String("origin"),
 			Timestamp: proto.Int64(1000000000),
@@ -332,15 +338,6 @@ var _ = Describe("DatadogClient", func() {
 	})
 
 	It("sends a value 1 for the slowConsumerAlert metric when consumer error is set", func() {
-		c := datadogclient.New(
-			ts.URL,
-			"dummykey",
-			"datadog.nozzle.",
-			"test-deployment",
-			"dummy-ip",
-			gosteno.NewLogger("datadogclient test"),
-		)
-
 		c.AlertSlowConsumerError()
 
 		err := c.PostMetrics()
@@ -360,15 +357,6 @@ var _ = Describe("DatadogClient", func() {
 	})
 
 	It("sends a value 0 for the slowConsumerAlert metric when consumer error is not set", func() {
-		c := datadogclient.New(
-			ts.URL,
-			"dummykey",
-			"datadog.nozzle.",
-			"test-deployment",
-			"dummy-ip",
-			gosteno.NewLogger("datadogclient test"),
-		)
-
 		err := c.PostMetrics()
 		Expect(err).ToNot(HaveOccurred())
 
@@ -386,15 +374,6 @@ var _ = Describe("DatadogClient", func() {
 	})
 
 	It("unsets the slow consumer error once it publishes the alert to datadog", func() {
-		c := datadogclient.New(
-			ts.URL,
-			"dummykey",
-			"datadog.nozzle.",
-			"test-deployment",
-			"dummy-ip",
-			gosteno.NewLogger("datadogclient test"),
-		)
-
 		c.AlertSlowConsumerError()
 
 		err := c.PostMetrics()
@@ -422,14 +401,6 @@ var _ = Describe("DatadogClient", func() {
 	})
 
 	It("returns an error when datadog responds with a non 200 response code", func() {
-		c := datadogclient.New(
-			ts.URL,
-			"dummykey",
-			"datadog.nozzle.",
-			"test-deployment",
-			"dummy-ip",
-			gosteno.NewLogger("datadogclient test "),
-		)
 		responseCode = http.StatusBadRequest // 400
 		err := c.PostMetrics()
 		Expect(err).To(HaveOccurred())
