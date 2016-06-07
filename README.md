@@ -106,4 +106,4 @@ parameters are supported
 | NOZZLE_DISABLEACCESSCONTROL   | If true, disables authentication with the UAA. Used in lattice deployments |
 
 ### CI
-The concourse pipeline for the datadog nozzle is present here: https://concourse.walnut.cf-app.com/pipelines/nozzles?groups=datadog-nozzle
+The concourse pipeline for the datadog nozzle is present [here](https://loggregator.ci.cf-app.com/pipelines/nozzles?groups=datadog-nozzle)
