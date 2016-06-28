@@ -81,6 +81,71 @@ var _ = Describe("DatadogClient", func() {
 		))
 	})
 
+	It("uses tags as an identifier for batching purposes", func() {
+		c.AddMetric(&events.Envelope{
+			Origin:    proto.String("test-origin"),
+			Timestamp: proto.Int64(1000000000),
+			EventType: events.Envelope_ValueMetric.Enum(),
+
+			// fields that gets sent as tags
+			Deployment: proto.String("deployment-name"),
+			Job:        proto.String("doppler"),
+			Index:      proto.String("1"),
+			Ip:         proto.String("10.0.1.2"),
+
+			// additional tags
+			Tags: map[string]string{
+				"protocol":   "http",
+				"request_id": "a1f5-deadbeef",
+			},
+		})
+
+		c.AddMetric(&events.Envelope{
+			Origin:    proto.String("test-origin"),
+			Timestamp: proto.Int64(1000000000),
+			EventType: events.Envelope_ValueMetric.Enum(),
+
+			// fields that gets sent as tags
+			Deployment: proto.String("deployment-name"),
+			Job:        proto.String("doppler"),
+			Index:      proto.String("1"),
+			Ip:         proto.String("10.0.1.2"),
+
+			// additional tags
+			Tags: map[string]string{
+				"protocol":   "https",
+				"request_id": "d3ac-livefood",
+			},
+		})
+
+		err := c.PostMetrics()
+		Expect(err).ToNot(HaveOccurred())
+
+		Eventually(bodies).Should(HaveLen(1))
+		var payload datadogclient.Payload
+		err = json.Unmarshal(bodies[0], &payload)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(payload.Series).To(HaveLen(5))
+		Expect(payload.Series).To(ContainMetricWithTags(
+			"datadog.nozzle.test-origin.",
+			"deployment:deployment-name",
+			"job:doppler",
+			"index:1",
+			"ip:10.0.1.2",
+			"protocol:http",
+			"request_id:a1f5-deadbeef",
+		))
+		Expect(payload.Series).To(ContainMetricWithTags(
+			"datadog.nozzle.test-origin.",
+			"deployment:deployment-name",
+			"job:doppler",
+			"index:1",
+			"ip:10.0.1.2",
+			"protocol:https",
+			"request_id:d3ac-livefood",
+		))
+	})
+
 	It("ignores messages that aren't value metrics or counter events", func() {
 		c.AddMetric(&events.Envelope{
 			Origin:    proto.String("origin"),

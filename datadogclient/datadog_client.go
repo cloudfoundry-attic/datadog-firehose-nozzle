@@ -2,9 +2,11 @@ package datadogclient
 
 import (
 	"bytes"
+	"crypto/sha1"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"sort"
 	"time"
 
 	"errors"
@@ -22,18 +24,16 @@ type Client struct {
 	prefix                string
 	deployment            string
 	ip                    string
+	tagsHash              string
 	totalMessagesReceived uint64
 	totalMetricsSent      uint64
 	log                   *gosteno.Logger
 }
 
 type metricKey struct {
-	eventType  events.Envelope_EventType
-	name       string
-	deployment string
-	job        string
-	index      string
-	ip         string
+	eventType events.Envelope_EventType
+	name      string
+	tagsHash  string
 }
 
 type metricValue struct {
@@ -59,6 +59,10 @@ type Point struct {
 }
 
 func New(apiURL string, apiKey string, prefix string, deployment string, ip string, log *gosteno.Logger) *Client {
+	ourTags := []string{
+		"deployment:" + deployment,
+		"ip:" + ip,
+	}
 	return &Client{
 		apiURL:       apiURL,
 		apiKey:       apiKey,
@@ -67,6 +71,7 @@ func New(apiURL string, apiKey string, prefix string, deployment string, ip stri
 		deployment:   deployment,
 		ip:           ip,
 		log:          log,
+		tagsHash:     hashTags(ourTags),
 	}
 }
 
@@ -80,19 +85,17 @@ func (c *Client) AddMetric(envelope *events.Envelope) {
 		return
 	}
 
+	tags := parseTags(envelope)
 	key := metricKey{
-		eventType:  envelope.GetEventType(),
-		name:       getName(envelope),
-		deployment: envelope.GetDeployment(),
-		job:        envelope.GetJob(),
-		index:      envelope.GetIndex(),
-		ip:         envelope.GetIp(),
+		eventType: envelope.GetEventType(),
+		name:      getName(envelope),
+		tagsHash:  hashTags(tags),
 	}
 
 	mVal := c.metricPoints[key]
 	value := getValue(envelope)
 
-	mVal.tags = getTags(envelope)
+	mVal.tags = tags
 	mVal.points = append(mVal.points, Point{
 		Timestamp: envelope.GetTimestamp() / int64(time.Second),
 		Value:     value,
@@ -143,9 +146,8 @@ func (c *Client) populateInternalMetrics() {
 
 func (c *Client) containsSlowConsumerAlert() bool {
 	key := metricKey{
-		name:       "slowConsumerAlert",
-		deployment: c.deployment,
-		ip:         c.ip,
+		name:     "slowConsumerAlert",
+		tagsHash: c.tagsHash,
 	}
 	_, ok := c.metricPoints[key]
 	return ok
@@ -168,9 +170,8 @@ func (c *Client) formatMetrics() ([]byte, uint64) {
 
 func (c *Client) addInternalMetric(name string, value uint64) {
 	key := metricKey{
-		name:       name,
-		deployment: c.deployment,
-		ip:         c.ip,
+		name:     name,
+		tagsHash: c.tagsHash,
 	}
 
 	point := Point{
@@ -211,21 +212,18 @@ func getValue(envelope *events.Envelope) float64 {
 	}
 }
 
-func getTags(envelope *events.Envelope) []string {
-	var tags []string
-
-	tags = appendTagIfNotEmpty(tags, "deployment", envelope.GetDeployment())
+func parseTags(envelope *events.Envelope) []string {
+	tags := appendTagIfNotEmpty(nil, "deployment", envelope.GetDeployment())
 	tags = appendTagIfNotEmpty(tags, "job", envelope.GetJob())
 	tags = appendTagIfNotEmpty(tags, "index", envelope.GetIndex())
 	tags = appendTagIfNotEmpty(tags, "ip", envelope.GetIp())
 	for tname, tvalue := range envelope.GetTags() {
 		tags = appendTagIfNotEmpty(tags, tname, tvalue)
 	}
-
 	return tags
 }
 
-func appendTagIfNotEmpty(tags []string, key string, value string) []string {
+func appendTagIfNotEmpty(tags []string, key, value string) []string {
 	if value != "" {
 		tags = append(tags, fmt.Sprintf("%s:%s", key, value))
 	}
@@ -252,4 +250,14 @@ func (p *Point) UnmarshalJSON(in []byte) error {
 	p.Value = value
 
 	return nil
+}
+
+func hashTags(tags []string) string {
+	sort.Strings(tags)
+	hash := ""
+	for _, tag := range tags {
+		tagHash := sha1.Sum([]byte(tag))
+		hash += string(tagHash[:])
+	}
+	return hash
 }
