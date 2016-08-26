@@ -18,6 +18,7 @@ import (
 
 var (
 	bodies       [][]byte
+	reqs         chan *http.Request
 	responseCode int
 )
 
@@ -29,6 +30,7 @@ var _ = Describe("DatadogClient", func() {
 
 	BeforeEach(func() {
 		bodies = nil
+		reqs = make(chan *http.Request, 1000)
 		responseCode = http.StatusOK
 		ts = httptest.NewServer(http.HandlerFunc(handlePost))
 		c = datadogclient.New(
@@ -39,6 +41,27 @@ var _ = Describe("DatadogClient", func() {
 			"dummy-ip",
 			gosteno.NewLogger("datadogclient test"),
 		)
+	})
+
+	It("sets Content-Type header when making POST requests", func() {
+		c.AddMetric(&events.Envelope{
+			Origin:    proto.String("test-origin"),
+			Timestamp: proto.Int64(1000000000),
+			EventType: events.Envelope_ValueMetric.Enum(),
+
+			// fields that gets sent as tags
+			Deployment: proto.String("deployment-name"),
+			Job:        proto.String("doppler"),
+			Index:      proto.String("1"),
+			Ip:         proto.String("10.0.1.2"),
+		})
+
+		err := c.PostMetrics()
+		Expect(err).ToNot(HaveOccurred())
+		var req *http.Request
+		Eventually(reqs).Should(Receive(&req))
+		Expect(req.Method).To(Equal("POST"))
+		Expect(req.Header.Get("Content-Type")).To(Equal("application/json"))
 	})
 
 	It("sends tags", func() {
@@ -519,6 +542,7 @@ func handlePost(w http.ResponseWriter, r *http.Request) {
 		panic("No body!")
 	}
 
+	reqs <- r
 	bodies = append(bodies, body)
 	w.WriteHeader(responseCode)
 }

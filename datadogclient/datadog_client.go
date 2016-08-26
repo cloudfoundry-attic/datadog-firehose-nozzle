@@ -114,6 +114,7 @@ func (c *Client) PostMetrics() error {
 	seriesBytes, metricsCount := c.formatMetrics()
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(seriesBytes))
+	req.Header.Set("Content-Type", "application/json")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return err
