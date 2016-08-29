@@ -62,6 +62,7 @@ func (d *DatadogFirehoseNozzle) createClient() {
 		d.config.MetricPrefix,
 		d.config.Deployment,
 		ipAddress,
+		time.Duration(d.config.DataDogTimeoutSeconds)*time.Second,
 		d.log,
 	)
 }

@@ -27,6 +27,7 @@ type Client struct {
 	tagsHash              string
 	totalMessagesReceived uint64
 	totalMetricsSent      uint64
+	httpClient            *http.Client
 	log                   *gosteno.Logger
 }
 
@@ -58,11 +59,16 @@ type Point struct {
 	Value     float64
 }
 
-func New(apiURL string, apiKey string, prefix string, deployment string, ip string, log *gosteno.Logger) *Client {
+func New(apiURL string, apiKey string, prefix string, deployment string, ip string, writeTimeout time.Duration, log *gosteno.Logger) *Client {
 	ourTags := []string{
 		"deployment:" + deployment,
 		"ip:" + ip,
 	}
+
+	httpClient := &http.Client{
+		Timeout: writeTimeout,
+	}
+
 	return &Client{
 		apiURL:       apiURL,
 		apiKey:       apiKey,
@@ -72,6 +78,7 @@ func New(apiURL string, apiKey string, prefix string, deployment string, ip stri
 		ip:           ip,
 		log:          log,
 		tagsHash:     hashTags(ourTags),
+		httpClient:   httpClient,
 	}
 }
 

@@ -99,6 +99,7 @@ parameters are supported
 | NOZZLE_FIREHOSESUBSCRIPTIONID | Subscription ID used when connecting to the firehose. Nozzles with the same subscription ID get a proportional share of the firehose |
 | NOZZLE_DATADOGURL             | The Datadog API URL |
 | NOZZLE_DATADOGAPIKEY          | The API key used when publishing metrics to datadog |
+| NOZZLE_DATADOGTIMEOUTSECONDS  | The number of seconds to set the timeout for writes to Datadog |
 | NOZZLE_METRICPREFIX           | The metric prefix is prepended to all metrics flowing through the nozzle |
 | NOZZLE_DEPLOYMENT             | The deployment name for the nozzle. Used for tagging metrics internal to the nozzle |
 | NOZZLE_FLUSHDURATIONSECONDS   | Number of seconds to buffer data before publishing to Datadog |
