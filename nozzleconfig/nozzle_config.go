@@ -10,8 +10,8 @@ import (
 
 type NozzleConfig struct {
 	UAAURL                 string
-	Username               string
-	Password               string
+	Client                 string
+	ClientSecret           string
 	TrafficControllerURL   string
 	FirehoseSubscriptionID string
 	DataDogURL             string
@@ -37,8 +37,8 @@ func Parse(configPath string) (*NozzleConfig, error) {
 	}
 
 	overrideWithEnvVar("NOZZLE_UAAURL", &config.UAAURL)
-	overrideWithEnvVar("NOZZLE_USERNAME", &config.Username)
-	overrideWithEnvVar("NOZZLE_PASSWORD", &config.Password)
+	overrideWithEnvVar("NOZZLE_CLIENT", &config.Client)
+	overrideWithEnvVar("NOZZLE_CLIENT_SECRET", &config.ClientSecret)
 	overrideWithEnvVar("NOZZLE_TRAFFICCONTROLLERURL", &config.TrafficControllerURL)
 	overrideWithEnvVar("NOZZLE_FIREHOSESUBSCRIPTIONID", &config.FirehoseSubscriptionID)
 	overrideWithEnvVar("NOZZLE_DATADOGURL", &config.DataDogURL)

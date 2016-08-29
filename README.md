@@ -93,8 +93,8 @@ parameters are supported
 | Environment variable          | Description            |
 |-------------------------------|------------------------|
 | NOZZLE_UAAURL                 | UAA URL which the nozzle uses to get an authentication token for the firehose |
-| NOZZLE_USERNAME               | User who has access to the firehose |
-| NOZZLE_PASSWORD               | Password for the user |
+| NOZZLE_CLIENT                 | Client who has access to the firehose |
+| NOZZLE_CLIENT_SECRET          | Secret for the client |
 | NOZZLE_TRAFFICCONTROLLERURL   | Loggregator's traffic controller URL |
 | NOZZLE_FIREHOSESUBSCRIPTIONID | Subscription ID used when connecting to the firehose. Nozzles with the same subscription ID get a proportional share of the firehose |
 | NOZZLE_DATADOGURL             | The Datadog API URL |

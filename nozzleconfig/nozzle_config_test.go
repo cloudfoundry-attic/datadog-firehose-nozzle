@@ -1,10 +1,11 @@
 package nozzleconfig_test
 
 import (
+	"os"
+
 	"github.com/cloudfoundry-incubator/datadog-firehose-nozzle/nozzleconfig"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"os"
 )
 
 var _ = Describe("NozzleConfig", func() {
@@ -16,8 +17,8 @@ var _ = Describe("NozzleConfig", func() {
 		conf, err := nozzleconfig.Parse("../config/datadog-firehose-nozzle.json")
 		Expect(err).ToNot(HaveOccurred())
 		Expect(conf.UAAURL).To(Equal("https://uaa.walnut.cf-app.com"))
-		Expect(conf.Username).To(Equal("user"))
-		Expect(conf.Password).To(Equal("user_password"))
+		Expect(conf.Client).To(Equal("user"))
+		Expect(conf.ClientSecret).To(Equal("user_password"))
 		Expect(conf.DataDogURL).To(Equal("https://app.datadoghq.com/api/v1/series"))
 		Expect(conf.DataDogAPIKey).To(Equal("<enter api key>"))
 		Expect(conf.FlushDurationSeconds).To(BeEquivalentTo(15))
@@ -30,8 +31,8 @@ var _ = Describe("NozzleConfig", func() {
 
 	It("successfully overwrites file config values with environmental variables", func() {
 		os.Setenv("NOZZLE_UAAURL", "https://uaa.walnut-env.cf-app.com")
-		os.Setenv("NOZZLE_USERNAME", "env-user")
-		os.Setenv("NOZZLE_PASSWORD", "env-user-password")
+		os.Setenv("NOZZLE_CLIENT", "env-user")
+		os.Setenv("NOZZLE_CLIENT_SECRET", "env-user-password")
 		os.Setenv("NOZZLE_DATADOGURL", "https://app.datadoghq-env.com/api/v1/series")
 		os.Setenv("NOZZLE_DATADOGAPIKEY", "envapi-key>")
 		os.Setenv("NOZZLE_FLUSHDURATIONSECONDS", "25")
@@ -44,8 +45,8 @@ var _ = Describe("NozzleConfig", func() {
 		conf, err := nozzleconfig.Parse("../config/datadog-firehose-nozzle.json")
 		Expect(err).ToNot(HaveOccurred())
 		Expect(conf.UAAURL).To(Equal("https://uaa.walnut-env.cf-app.com"))
-		Expect(conf.Username).To(Equal("env-user"))
-		Expect(conf.Password).To(Equal("env-user-password"))
+		Expect(conf.Client).To(Equal("env-user"))
+		Expect(conf.ClientSecret).To(Equal("env-user-password"))
 		Expect(conf.DataDogURL).To(Equal("https://app.datadoghq-env.com/api/v1/series"))
 		Expect(conf.DataDogAPIKey).To(Equal("envapi-key>"))
 		Expect(conf.FlushDurationSeconds).To(BeEquivalentTo(25))
