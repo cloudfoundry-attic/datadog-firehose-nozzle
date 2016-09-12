@@ -26,6 +26,7 @@ var _ = Describe("NozzleConfig", func() {
 		Expect(conf.InsecureSSLSkipVerify).To(Equal(true))
 		Expect(conf.MetricPrefix).To(Equal("datadogclient"))
 		Expect(conf.Deployment).To(Equal("deployment-name"))
+		Expect(conf.DeploymentFilter).To(Equal("deployment-filter"))
 		Expect(conf.DisableAccessControl).To(Equal(false))
 		Expect(conf.IdleTimeoutSeconds).To(BeEquivalentTo(60))
 	})
@@ -41,6 +42,7 @@ var _ = Describe("NozzleConfig", func() {
 		os.Setenv("NOZZLE_INSECURESSLSKIPVERIFY", "false")
 		os.Setenv("NOZZLE_METRICPREFIX", "env-datadogclient")
 		os.Setenv("NOZZLE_DEPLOYMENT", "env-deployment-name")
+		os.Setenv("NOZZLE_DEPLOYMENT_FILTER", "env-deployment-filter")
 		os.Setenv("NOZZLE_DISABLEACCESSCONTROL", "true")
 		os.Setenv("NOZZLE_IDLETIMEOUTSECONDS", "30")
 
@@ -56,6 +58,7 @@ var _ = Describe("NozzleConfig", func() {
 		Expect(conf.InsecureSSLSkipVerify).To(Equal(false))
 		Expect(conf.MetricPrefix).To(Equal("env-datadogclient"))
 		Expect(conf.Deployment).To(Equal("env-deployment-name"))
+		Expect(conf.DeploymentFilter).To(Equal("env-deployment-filter"))
 		Expect(conf.DisableAccessControl).To(Equal(true))
 		Expect(conf.IdleTimeoutSeconds).To(BeEquivalentTo(30))
 	})

@@ -102,6 +102,7 @@ parameters are supported
 | NOZZLE_DATADOGTIMEOUTSECONDS  | The number of seconds to set the timeout for writes to Datadog |
 | NOZZLE_METRICPREFIX           | The metric prefix is prepended to all metrics flowing through the nozzle |
 | NOZZLE_DEPLOYMENT             | The deployment name for the nozzle. Used for tagging metrics internal to the nozzle |
+| NOZZLE_DEPLOYMENT_FILTER      | If set, the nozzle will only send metrics with this deployment name |
 | NOZZLE_FLUSHDURATIONSECONDS   | Number of seconds to buffer data before publishing to Datadog |
 | NOZZLE_INSECURESSLSKIPVERIFY  | If true, allows insecure connections to the UAA and the Trafficcontroller |
 | NOZZLE_DISABLEACCESSCONTROL   | If true, disables authentication with the UAA. Used in lattice deployments |

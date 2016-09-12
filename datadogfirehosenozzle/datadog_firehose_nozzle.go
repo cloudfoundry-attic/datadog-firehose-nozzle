@@ -83,6 +83,10 @@ func (d *DatadogFirehoseNozzle) postToDatadog() error {
 		case <-ticker.C:
 			d.postMetrics()
 		case envelope := <-d.messages:
+			if !d.keepMessage(envelope) {
+				continue
+			}
+
 			d.handleMessage(envelope)
 			d.client.AddMetric(envelope)
 		case err := <-d.errs:
@@ -120,6 +124,10 @@ func (d *DatadogFirehoseNozzle) handleError(err error) {
 	d.log.Infof("Closing connection with traffic controller due to %v", err)
 	d.consumer.Close()
 	d.postMetrics()
+}
+
+func (d *DatadogFirehoseNozzle) keepMessage(envelope *events.Envelope) bool {
+	return d.config.DeploymentFilter == "" || d.config.DeploymentFilter == envelope.GetDeployment()
 }
 
 func (d *DatadogFirehoseNozzle) handleMessage(envelope *events.Envelope) {

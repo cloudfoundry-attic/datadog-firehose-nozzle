@@ -21,6 +21,7 @@ type NozzleConfig struct {
 	InsecureSSLSkipVerify  bool
 	MetricPrefix           string
 	Deployment             string
+	DeploymentFilter       string
 	DisableAccessControl   bool
 	IdleTimeoutSeconds     uint32
 }
@@ -47,6 +48,7 @@ func Parse(configPath string) (*NozzleConfig, error) {
 	overrideWithEnvUint32("NOZZLE_DATADOGTIMEOUTSECONDS", &config.DataDogTimeoutSeconds)
 	overrideWithEnvVar("NOZZLE_METRICPREFIX", &config.MetricPrefix)
 	overrideWithEnvVar("NOZZLE_DEPLOYMENT", &config.Deployment)
+	overrideWithEnvVar("NOZZLE_DEPLOYMENT_FILTER", &config.DeploymentFilter)
 
 	overrideWithEnvUint32("NOZZLE_FLUSHDURATIONSECONDS", &config.FlushDurationSeconds)
 

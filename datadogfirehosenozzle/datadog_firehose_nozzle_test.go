@@ -50,6 +50,7 @@ var _ = Describe("Datadog Firehose Nozzle", func() {
 			TrafficControllerURL: strings.Replace(fakeFirehose.URL(), "http:", "ws:", 1),
 			DisableAccessControl: false,
 			MetricPrefix:         "datadog.nozzle.",
+			Deployment:           "nozzle-deployment",
 		}
 		content := make([]byte, 1024)
 		logContent = bytes.NewBuffer(content)
@@ -61,6 +62,9 @@ var _ = Describe("Datadog Firehose Nozzle", func() {
 		}
 		gosteno.Init(c)
 		log = gosteno.NewLogger("test")
+	})
+
+	JustBeforeEach(func() {
 		tokenFetcher := uaatokenfetcher.New(fakeUAA.URL(), "un", "pwd", true, log)
 		nozzle = datadogfirehosenozzle.NewDatadogFirehoseNozzle(config, tokenFetcher, log)
 	})
@@ -279,6 +283,38 @@ var _ = Describe("Datadog Firehose Nozzle", func() {
 			Expect(err.Error()).To(ContainSubstring("i/o timeout"))
 		})
 	})
+
+	Context("with DeploymentFilter provided", func() {
+		BeforeEach(func() {
+			config.DeploymentFilter = "good-deployment-name"
+		})
+
+		JustBeforeEach(func() {
+			go nozzle.Start()
+		})
+
+		It("includes messages that match deployment filter", func() {
+			goodEnvelope := events.Envelope{
+				Origin:     proto.String("origin"),
+				Timestamp:  proto.Int64(1000000000),
+				Deployment: proto.String("good-deployment-name"),
+			}
+			fakeFirehose.AddEvent(goodEnvelope)
+			Eventually(fakeDatadogAPI.ReceivedContents).Should(Receive())
+		})
+
+		It("filters out messages from other deployments", func() {
+			badEnvelope := events.Envelope{
+				Origin:     proto.String("origin"),
+				Timestamp:  proto.Int64(1000000000),
+				Deployment: proto.String("bad-deployment-name"),
+			}
+			fakeFirehose.AddEvent(badEnvelope)
+
+			rxContents := filterOutNozzleMetrics(config.Deployment, fakeDatadogAPI.ReceivedContents)
+			Consistently(rxContents).ShouldNot(Receive())
+		})
+	})
 })
 
 func findSlowConsumerMetric(payload datadogclient.Payload) *datadogclient.Metric {
@@ -288,4 +324,17 @@ func findSlowConsumerMetric(payload datadogclient.Payload) *datadogclient.Metric
 		}
 	}
 	return nil
+}
+
+func filterOutNozzleMetrics(deployment string, c <-chan []byte) <-chan []byte {
+	filter := "deployment:" + deployment
+	result := make(chan []byte)
+	go func() {
+		for b := range c {
+			if !strings.Contains(string(b), filter) {
+				result <- b
+			}
+		}
+	}()
+	return result
 }
