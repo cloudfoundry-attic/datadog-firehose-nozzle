@@ -1,5 +1,5 @@
 ## Summary
-[![Build Status](https://travis-ci.org/cloudfoundry-incubator/datadog-firehose-nozzle.svg?branch=master)](https://travis-ci.org/cloudfoundry-incubator/datadog-firehose-nozzle) [![Coverage Status](https://coveralls.io/repos/cloudfoundry-incubator/datadog-firehose-nozzle/badge.svg)](https://coveralls.io/r/cloudfoundry-incubator/datadog-firehose-nozzle)
+[![Build Status](https://loggregator.ci.cf-app.com/api/v1/teams/main/pipelines/nozzles/jobs/datadog-nozzle-unit-tests/badge)](https://loggregator.ci.cf-app.com/teams/main/pipelines/nozzles/jobs/datadog-nozzle-unit-tests) [![Coverage Status](https://coveralls.io/repos/cloudfoundry-incubator/datadog-firehose-nozzle/badge.svg)](https://coveralls.io/r/cloudfoundry-incubator/datadog-firehose-nozzle)
 
 The datadog-firehose-nozzle is a CF component which forwards metrics from the Loggregator Firehose to [Datadog](http://www.datadoghq.com/)
 
