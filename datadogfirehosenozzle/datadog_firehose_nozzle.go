@@ -8,6 +8,7 @@ import (
 	"github.com/cloudfoundry-incubator/datadog-firehose-nozzle/nozzleconfig"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/noaa/consumer"
+	noaaerrors "github.com/cloudfoundry/noaa/errors"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gorilla/websocket"
 	"github.com/pivotal-golang/localip"
@@ -104,6 +105,10 @@ func (d *DatadogFirehoseNozzle) postMetrics() {
 }
 
 func (d *DatadogFirehoseNozzle) handleError(err error) {
+	if retryErr, ok := err.(noaaerrors.RetryError); ok {
+		err = retryErr.Err
+	}
+
 	switch closeErr := err.(type) {
 	case *websocket.CloseError:
 		switch closeErr.Code {

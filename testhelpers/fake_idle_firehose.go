@@ -1,10 +1,11 @@
 package testhelpers
 
 import (
-	"github.com/gorilla/websocket"
 	"net/http"
 	"net/http/httptest"
 	"time"
+
+	"github.com/gorilla/websocket"
 )
 
 type FakeIdleFirehose struct {

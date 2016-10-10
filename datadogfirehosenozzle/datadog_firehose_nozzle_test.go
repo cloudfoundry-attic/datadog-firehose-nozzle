@@ -102,7 +102,6 @@ var _ = Describe("Datadog Firehose Nozzle", func() {
 		var payload datadogclient.Payload
 		err := json.Unmarshal(contents, &payload)
 		Expect(err).ToNot(HaveOccurred())
-		Expect(fakeBuffer.GetContent()).ToNot(ContainSubstring("Error while reading from the firehose"))
 		// +3 internal metrics that show totalMessagesReceived, totalMetricSent, and slowConsumerAlert
 		Expect(payload.Series).To(HaveLen(13))
 

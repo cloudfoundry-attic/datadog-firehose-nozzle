@@ -1,14 +1,15 @@
 package testhelpers
 
 import (
-	"github.com/cloudfoundry/sonde-go/events"
-	"github.com/gogo/protobuf/proto"
-	"github.com/gorilla/websocket"
 	"log"
 	"net/http"
 	"net/http/httptest"
 	"sync"
 	"time"
+
+	"github.com/cloudfoundry/sonde-go/events"
+	"github.com/gogo/protobuf/proto"
+	"github.com/gorilla/websocket"
 )
 
 type FakeFirehose struct {
