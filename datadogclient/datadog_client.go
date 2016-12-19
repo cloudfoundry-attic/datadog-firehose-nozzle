@@ -13,6 +13,7 @@ import (
 
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/sonde-go/events"
+	"io/ioutil"
 )
 
 const DefaultAPIURL = "https://app.datadoghq.com/api/v1"
@@ -126,10 +127,14 @@ func (c *Client) PostMetrics() error {
 	if err != nil {
 		return err
 	}
-
 	defer resp.Body.Close()
+
 	if resp.StatusCode >= 300 || resp.StatusCode < 200 {
-		return fmt.Errorf("datadog request returned HTTP response: %s", resp.Status)
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			body = []byte("failed to read body")
+		}
+		return fmt.Errorf("datadog request returned HTTP response: %s\nResponse Body: %s", resp.Status, body)
 	}
 
 	c.totalMetricsSent += metricsCount

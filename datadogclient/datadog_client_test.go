@@ -20,6 +20,7 @@ var (
 	bodies       [][]byte
 	reqs         chan *http.Request
 	responseCode int
+	responseBody []byte
 )
 
 var _ = Describe("DatadogClient", func() {
@@ -32,6 +33,7 @@ var _ = Describe("DatadogClient", func() {
 		bodies = nil
 		reqs = make(chan *http.Request, 1000)
 		responseCode = http.StatusOK
+		responseBody = []byte("some-response-body")
 		ts = httptest.NewServer(http.HandlerFunc(handlePost))
 		c = datadogclient.New(
 			ts.URL,
@@ -491,9 +493,12 @@ var _ = Describe("DatadogClient", func() {
 
 	It("returns an error when datadog responds with a non 200 response code", func() {
 		responseCode = http.StatusBadRequest // 400
+		responseBody = []byte("something went horribly wrong")
 		err := c.PostMetrics()
 		Expect(err).To(HaveOccurred())
 		Expect(err.Error()).To(ContainSubstring("datadog request returned HTTP response: 400 Bad Request"))
+		Expect(err.Error()).To(ContainSubstring("something went horribly wrong"))
+
 
 		responseCode = http.StatusSwitchingProtocols // 101
 		err = c.PostMetrics()
@@ -546,6 +551,7 @@ func handlePost(w http.ResponseWriter, r *http.Request) {
 	reqs <- r
 	bodies = append(bodies, body)
 	w.WriteHeader(responseCode)
+	w.Write(responseBody)
 }
 
 func findSlowConsumerMetric(payload datadogclient.Payload) *datadogclient.Metric {
