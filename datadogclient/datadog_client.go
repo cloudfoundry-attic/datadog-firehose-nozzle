@@ -11,9 +11,10 @@ import (
 
 	"errors"
 
+	"io/ioutil"
+
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/sonde-go/events"
-	"io/ioutil"
 )
 
 const DefaultAPIURL = "https://app.datadoghq.com/api/v1"
@@ -123,7 +124,7 @@ func (c *Client) PostMetrics() error {
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(seriesBytes))
 	req.Header.Set("Content-Type", "application/json")
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return err
 	}

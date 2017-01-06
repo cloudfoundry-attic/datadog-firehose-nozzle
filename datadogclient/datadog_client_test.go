@@ -46,6 +46,44 @@ var _ = Describe("DatadogClient", func() {
 		)
 	})
 
+	Context("datadog does not respond", func() {
+		BeforeEach(func() {
+			ts = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				var nilChan chan struct{}
+				<-nilChan
+			}))
+			c = datadogclient.New(
+				ts.URL,
+				"dummykey",
+				"datadog.nozzle.",
+				"test-deployment",
+				"dummy-ip",
+				time.Millisecond,
+				gosteno.NewLogger("datadogclient test"),
+			)
+		})
+
+		It("respects the timeout", func() {
+			c.AddMetric(&events.Envelope{
+				Origin:    proto.String("test-origin"),
+				Timestamp: proto.Int64(1000000000),
+				EventType: events.Envelope_ValueMetric.Enum(),
+
+				// fields that gets sent as tags
+				Deployment: proto.String("deployment-name"),
+				Job:        proto.String("doppler"),
+				Index:      proto.String("1"),
+				Ip:         proto.String("10.0.1.2"),
+			})
+
+			errs := make(chan error)
+			go func() {
+				errs <- c.PostMetrics()
+			}()
+			Eventually(errs).Should(Receive(HaveOccurred()))
+		})
+	})
+
 	It("sets Content-Type header when making POST requests", func() {
 		c.AddMetric(&events.Envelope{
 			Origin:    proto.String("test-origin"),
@@ -498,7 +536,6 @@ var _ = Describe("DatadogClient", func() {
 		Expect(err).To(HaveOccurred())
 		Expect(err.Error()).To(ContainSubstring("datadog request returned HTTP response: 400 Bad Request"))
 		Expect(err.Error()).To(ContainSubstring("something went horribly wrong"))
-
 
 		responseCode = http.StatusSwitchingProtocols // 101
 		err = c.PostMetrics()
