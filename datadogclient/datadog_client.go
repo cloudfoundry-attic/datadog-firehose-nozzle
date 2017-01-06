@@ -30,6 +30,7 @@ type Client struct {
 	totalMessagesReceived uint64
 	totalMetricsSent      uint64
 	httpClient            *http.Client
+	maxPostBytes          uint32
 	log                   *gosteno.Logger
 }
 
@@ -61,7 +62,7 @@ type Point struct {
 	Value     float64
 }
 
-func New(apiURL string, apiKey string, prefix string, deployment string, ip string, writeTimeout time.Duration, log *gosteno.Logger) *Client {
+func New(apiURL string, apiKey string, prefix string, deployment string, ip string, writeTimeout time.Duration, maxPostBytes uint32, log *gosteno.Logger) *Client {
 	ourTags := []string{
 		"deployment:" + deployment,
 		"ip:" + ip,
@@ -81,6 +82,7 @@ func New(apiURL string, apiKey string, prefix string, deployment string, ip stri
 		log:          log,
 		tagsHash:     hashTags(ourTags),
 		httpClient:   httpClient,
+		maxPostBytes: maxPostBytes,
 	}
 }
 
@@ -114,14 +116,24 @@ func (c *Client) AddMetric(envelope *events.Envelope) {
 }
 
 func (c *Client) PostMetrics() error {
-	url := c.seriesURL()
-
 	c.populateInternalMetrics()
 	numMetrics := len(c.metricPoints)
 	c.log.Infof("Posting %d metrics", numMetrics)
 
-	seriesBytes, metricsCount := c.formatMetrics()
+	return c.postMetrics(c.metricPoints)
+}
 
+func (c *Client) postMetrics(metrics map[metricKey]metricValue) error {
+	seriesBytes, metricsCount := formatMetrics(c.prefix, metrics)
+	if uint32(len(seriesBytes)) > c.maxPostBytes {
+		metricsA, metricsB := splitMetrics(metrics)
+		if err := c.postMetrics(metricsA); err != nil {
+			return err
+		}
+		return c.postMetrics(metricsB)
+	}
+
+	url := c.seriesURL()
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(seriesBytes))
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := c.httpClient.Do(req)
@@ -167,21 +179,6 @@ func (c *Client) containsSlowConsumerAlert() bool {
 	return ok
 }
 
-func (c *Client) formatMetrics() ([]byte, uint64) {
-	metrics := []Metric{}
-	for key, mVal := range c.metricPoints {
-		metrics = append(metrics, Metric{
-			Metric: c.prefix + key.name,
-			Points: mVal.points,
-			Type:   "gauge",
-			Tags:   mVal.tags,
-		})
-	}
-
-	encodedMetric, _ := json.Marshal(Payload{Series: metrics})
-	return encodedMetric, uint64(len(metrics))
-}
-
 func (c *Client) addInternalMetric(name string, value uint64) {
 	key := metricKey{
 		name:     name,
@@ -202,6 +199,38 @@ func (c *Client) addInternalMetric(name string, value uint64) {
 	}
 
 	c.metricPoints[key] = mValue
+}
+
+func formatMetrics(prefix string, data map[metricKey]metricValue) ([]byte, uint64) {
+	metrics := []Metric{}
+	for key, mVal := range data {
+		metrics = append(metrics, Metric{
+			Metric: prefix + key.name,
+			Points: mVal.points,
+			Type:   "gauge",
+			Tags:   mVal.tags,
+		})
+	}
+
+	encodedMetric, _ := json.Marshal(Payload{Series: metrics})
+	return encodedMetric, uint64(len(metrics))
+}
+
+func splitMetrics(data map[metricKey]metricValue) (a, b map[metricKey]metricValue) {
+	a = make(map[metricKey]metricValue)
+	b = make(map[metricKey]metricValue)
+	for k, v := range data {
+		split := len(v.points) / 2
+		a[k] = metricValue{
+			tags:   v.tags,
+			points: v.points[:split],
+		}
+		b[k] = metricValue{
+			tags:   v.tags,
+			points: v.points[split:],
+		}
+	}
+	return a, b
 }
 
 func getName(envelope *events.Envelope) string {

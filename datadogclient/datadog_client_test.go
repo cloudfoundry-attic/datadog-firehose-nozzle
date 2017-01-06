@@ -42,6 +42,7 @@ var _ = Describe("DatadogClient", func() {
 			"test-deployment",
 			"dummy-ip",
 			time.Second,
+			1024,
 			gosteno.NewLogger("datadogclient test"),
 		)
 	})
@@ -59,6 +60,7 @@ var _ = Describe("DatadogClient", func() {
 				"test-deployment",
 				"dummy-ip",
 				time.Millisecond,
+				1024,
 				gosteno.NewLogger("datadogclient test"),
 			)
 		})
@@ -331,6 +333,31 @@ var _ = Describe("DatadogClient", func() {
 		Expect(metricFound).To(BeTrue())
 
 		validateMetrics(payload, 2, 0)
+	})
+
+	It("breaks up a message that exceeds the FlushMaxBytes", func() {
+		for i := 0; i < 1000; i++ {
+			c.AddMetric(&events.Envelope{
+				Origin:    proto.String("origin"),
+				Timestamp: proto.Int64(1000000000 + int64(i)),
+				EventType: events.Envelope_ValueMetric.Enum(),
+				ValueMetric: &events.ValueMetric{
+					Name:  proto.String("metricName"),
+					Value: proto.Float64(5),
+				},
+				Deployment: proto.String("deployment-name"),
+				Job:        proto.String("doppler"),
+			})
+		}
+
+		err := c.PostMetrics()
+		Expect(err).ToNot(HaveOccurred())
+
+		f := func() int {
+			return len(bodies)
+		}
+
+		Eventually(f).Should(BeNumerically(">", 1))
 	})
 
 	It("registers metrics with the same name but different tags as different", func() {

@@ -46,6 +46,7 @@ var _ = Describe("Datadog Firehose Nozzle", func() {
 		config = &nozzleconfig.NozzleConfig{
 			UAAURL:               fakeUAA.URL(),
 			FlushDurationSeconds: 10,
+			FlushMaxBytes:        10240,
 			DataDogURL:           fakeDatadogAPI.URL(),
 			TrafficControllerURL: strings.Replace(fakeFirehose.URL(), "http:", "ws:", 1),
 			DisableAccessControl: false,
@@ -224,6 +225,7 @@ var _ = Describe("Datadog Firehose Nozzle", func() {
 
 			config = &nozzleconfig.NozzleConfig{
 				FlushDurationSeconds: 1,
+				FlushMaxBytes:        10240,
 				DataDogURL:           fakeDatadogAPI.URL(),
 				TrafficControllerURL: strings.Replace(fakeFirehose.URL(), "http:", "ws:", 1),
 				DisableAccessControl: true,
@@ -249,8 +251,8 @@ var _ = Describe("Datadog Firehose Nozzle", func() {
 			Consistently(fakeFirehose.LastAuthorization).Should(Equal(""))
 		})
 
-		It("does not rquire the presence of config.UAAURL", func() {
-			nozzle.Start()
+		It("does not require the presence of config.UAAURL", func() {
+			go nozzle.Start()
 			Consistently(func() int { return tokenFetcher.NumCalls }).Should(Equal(0))
 		})
 	})
@@ -267,6 +269,7 @@ var _ = Describe("Datadog Firehose Nozzle", func() {
 				DisableAccessControl: true,
 				IdleTimeoutSeconds:   1,
 				FlushDurationSeconds: 1,
+				FlushMaxBytes:        10240,
 			}
 
 			tokenFetcher := &FakeTokenFetcher{}

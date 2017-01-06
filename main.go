@@ -13,6 +13,8 @@ import (
 	"github.com/cloudfoundry-incubator/datadog-firehose-nozzle/uaatokenfetcher"
 )
 
+const flushMinBytes uint32 = 1024
+
 var (
 	logFilePath = flag.String("logFile", "", "The agent log file, defaults to STDOUT")
 	logLevel    = flag.Bool("debug", false, "Debug logging")
@@ -27,6 +29,9 @@ func main() {
 	config, err := nozzleconfig.Parse(*configFile)
 	if err != nil {
 		log.Fatalf("Error parsing config: %s", err.Error())
+	}
+	if config.FlushMaxBytes < flushMinBytes {
+		log.Fatalf("Config FlushMaxBytes is too low (%d): must be at least %d", config.FlushMaxBytes, flushMinBytes)
 	}
 
 	tokenFetcher := uaatokenfetcher.New(

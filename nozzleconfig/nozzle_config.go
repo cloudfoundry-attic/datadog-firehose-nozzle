@@ -18,6 +18,7 @@ type NozzleConfig struct {
 	DataDogAPIKey          string
 	DataDogTimeoutSeconds  uint32
 	FlushDurationSeconds   uint32
+	FlushMaxBytes          uint32
 	InsecureSSLSkipVerify  bool
 	MetricPrefix           string
 	Deployment             string
@@ -51,6 +52,7 @@ func Parse(configPath string) (*NozzleConfig, error) {
 	overrideWithEnvVar("NOZZLE_DEPLOYMENT_FILTER", &config.DeploymentFilter)
 
 	overrideWithEnvUint32("NOZZLE_FLUSHDURATIONSECONDS", &config.FlushDurationSeconds)
+	overrideWithEnvUint32("NOZZLE_FLUSHMAXBYTES", &config.FlushMaxBytes)
 
 	overrideWithEnvBool("NOZZLE_INSECURESSLSKIPVERIFY", &config.InsecureSSLSkipVerify)
 	overrideWithEnvBool("NOZZLE_DISABLEACCESSCONTROL", &config.DisableAccessControl)

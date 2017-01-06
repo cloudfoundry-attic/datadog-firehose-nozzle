@@ -37,6 +37,7 @@ var _ = Describe("DatadogFirehoseNozzle", func() {
 		fakeDatadogAPI.Start()
 
 		os.Setenv("NOZZLE_FLUSHDURATIONSECONDS", "2")
+		os.Setenv("NOZZLE_FLUSHMAXBYTES", "10240")
 		os.Setenv("NOZZLE_UAAURL", fakeUAA.URL())
 		os.Setenv("NOZZLE_DATADOGURL", fakeDatadogAPI.URL())
 		os.Setenv("NOZZLE_TRAFFICCONTROLLERURL", strings.Replace(fakeFirehose.URL(), "http:", "ws:", 1))
