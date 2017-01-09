@@ -22,7 +22,7 @@ const DefaultAPIURL = "https://app.datadoghq.com/api/v1"
 type Client struct {
 	apiURL                string
 	apiKey                string
-	metricPoints          map[metricKey]metricValue
+	metricPoints          map[MetricKey]MetricValue
 	prefix                string
 	deployment            string
 	ip                    string
@@ -34,15 +34,15 @@ type Client struct {
 	log                   *gosteno.Logger
 }
 
-type metricKey struct {
-	eventType events.Envelope_EventType
-	name      string
-	tagsHash  string
+type MetricKey struct {
+	EventType events.Envelope_EventType
+	Name      string
+	TagsHash  string
 }
 
-type metricValue struct {
-	tags   []string
-	points []Point
+type MetricValue struct {
+	Tags   []string
+	Points []Point
 }
 
 type Payload struct {
@@ -62,7 +62,16 @@ type Point struct {
 	Value     float64
 }
 
-func New(apiURL string, apiKey string, prefix string, deployment string, ip string, writeTimeout time.Duration, maxPostBytes uint32, log *gosteno.Logger) *Client {
+func New(
+	apiURL string,
+	apiKey string,
+	prefix string,
+	deployment string,
+	ip string,
+	writeTimeout time.Duration,
+	maxPostBytes uint32,
+	log *gosteno.Logger,
+) *Client {
 	ourTags := []string{
 		"deployment:" + deployment,
 		"ip:" + ip,
@@ -75,7 +84,7 @@ func New(apiURL string, apiKey string, prefix string, deployment string, ip stri
 	return &Client{
 		apiURL:       apiURL,
 		apiKey:       apiKey,
-		metricPoints: make(map[metricKey]metricValue),
+		metricPoints: make(map[MetricKey]MetricValue),
 		prefix:       prefix,
 		deployment:   deployment,
 		ip:           ip,
@@ -97,17 +106,17 @@ func (c *Client) AddMetric(envelope *events.Envelope) {
 	}
 
 	tags := parseTags(envelope)
-	key := metricKey{
-		eventType: envelope.GetEventType(),
-		name:      getName(envelope),
-		tagsHash:  hashTags(tags),
+	key := MetricKey{
+		EventType: envelope.GetEventType(),
+		Name:      getName(envelope),
+		TagsHash:  hashTags(tags),
 	}
 
 	mVal := c.metricPoints[key]
 	value := getValue(envelope)
 
-	mVal.tags = tags
-	mVal.points = append(mVal.points, Point{
+	mVal.Tags = tags
+	mVal.Points = append(mVal.Points, Point{
 		Timestamp: envelope.GetTimestamp() / int64(time.Second),
 		Value:     value,
 	})
@@ -123,7 +132,7 @@ func (c *Client) PostMetrics() error {
 	return c.postMetrics(c.metricPoints)
 }
 
-func (c *Client) postMetrics(metrics map[metricKey]metricValue) error {
+func (c *Client) postMetrics(metrics map[MetricKey]MetricValue) error {
 	seriesBytes, metricsCount := formatMetrics(c.prefix, metrics)
 	if uint32(len(seriesBytes)) > c.maxPostBytes {
 		metricsA, metricsB := splitMetrics(metrics)
@@ -151,7 +160,7 @@ func (c *Client) postMetrics(metrics map[metricKey]metricValue) error {
 	}
 
 	c.totalMetricsSent += metricsCount
-	c.metricPoints = make(map[metricKey]metricValue)
+	c.metricPoints = make(map[MetricKey]MetricValue)
 
 	return nil
 }
@@ -171,18 +180,18 @@ func (c *Client) populateInternalMetrics() {
 }
 
 func (c *Client) containsSlowConsumerAlert() bool {
-	key := metricKey{
-		name:     "slowConsumerAlert",
-		tagsHash: c.tagsHash,
+	key := MetricKey{
+		Name:     "slowConsumerAlert",
+		TagsHash: c.tagsHash,
 	}
 	_, ok := c.metricPoints[key]
 	return ok
 }
 
 func (c *Client) addInternalMetric(name string, value uint64) {
-	key := metricKey{
-		name:     name,
-		tagsHash: c.tagsHash,
+	key := MetricKey{
+		Name:     name,
+		TagsHash: c.tagsHash,
 	}
 
 	point := Point{
@@ -190,25 +199,25 @@ func (c *Client) addInternalMetric(name string, value uint64) {
 		Value:     float64(value),
 	}
 
-	mValue := metricValue{
-		tags: []string{
+	mValue := MetricValue{
+		Tags: []string{
 			fmt.Sprintf("ip:%s", c.ip),
 			fmt.Sprintf("deployment:%s", c.deployment),
 		},
-		points: []Point{point},
+		Points: []Point{point},
 	}
 
 	c.metricPoints[key] = mValue
 }
 
-func formatMetrics(prefix string, data map[metricKey]metricValue) ([]byte, uint64) {
+func formatMetrics(prefix string, data map[MetricKey]MetricValue) ([]byte, uint64) {
 	metrics := []Metric{}
 	for key, mVal := range data {
 		metrics = append(metrics, Metric{
-			Metric: prefix + key.name,
-			Points: mVal.points,
+			Metric: prefix + key.Name,
+			Points: mVal.Points,
 			Type:   "gauge",
-			Tags:   mVal.tags,
+			Tags:   mVal.Tags,
 		})
 	}
 
@@ -216,18 +225,18 @@ func formatMetrics(prefix string, data map[metricKey]metricValue) ([]byte, uint6
 	return encodedMetric, uint64(len(metrics))
 }
 
-func splitMetrics(data map[metricKey]metricValue) (a, b map[metricKey]metricValue) {
-	a = make(map[metricKey]metricValue)
-	b = make(map[metricKey]metricValue)
+func splitMetrics(data map[MetricKey]MetricValue) (a, b map[MetricKey]MetricValue) {
+	a = make(map[MetricKey]MetricValue)
+	b = make(map[MetricKey]MetricValue)
 	for k, v := range data {
-		split := len(v.points) / 2
-		a[k] = metricValue{
-			tags:   v.tags,
-			points: v.points[:split],
+		split := len(v.Points) / 2
+		a[k] = MetricValue{
+			Tags:   v.Tags,
+			Points: v.Points[:split],
 		}
-		b[k] = metricValue{
-			tags:   v.tags,
-			points: v.points[split:],
+		b[k] = MetricValue{
+			Tags:   v.Tags,
+			Points: v.Points[split:],
 		}
 	}
 	return a, b
