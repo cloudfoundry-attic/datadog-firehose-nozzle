@@ -135,6 +135,11 @@ func (c *Client) PostMetrics() error {
 	c.metricPoints = make(map[MetricKey]MetricValue)
 
 	for _, data := range seriesBytes {
+		if uint32(len(data)) > c.maxPostBytes {
+			c.log.Infof("Throwing out metric that exceeds %d bytes", c.maxPostBytes)
+			continue
+		}
+
 		if err := c.postMetrics(data); err != nil {
 			return err
 		}

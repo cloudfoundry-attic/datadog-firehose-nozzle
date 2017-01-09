@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"time"
 
 	"github.com/cloudfoundry/gosteno"
@@ -358,6 +359,29 @@ var _ = Describe("DatadogClient", func() {
 		}
 
 		Eventually(f).Should(BeNumerically(">", 1))
+	})
+
+	It("discards metrics that exceed that max size", func() {
+		c.AddMetric(&events.Envelope{
+			Origin:    proto.String("origin"),
+			Timestamp: proto.Int64(1000000000),
+			EventType: events.Envelope_ValueMetric.Enum(),
+			ValueMetric: &events.ValueMetric{
+				Name:  proto.String(strings.Repeat("some-big-name", 1000)),
+				Value: proto.Float64(5),
+			},
+			Deployment: proto.String("deployment-name"),
+			Job:        proto.String("doppler"),
+		})
+
+		err := c.PostMetrics()
+		Expect(err).ToNot(HaveOccurred())
+
+		f := func() int {
+			return len(bodies)
+		}
+
+		Consistently(f).Should(Equal(0))
 	})
 
 	It("registers metrics with the same name but different tags as different", func() {
