@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"time"
 
+	"code.cloudfoundry.org/localip"
 	"github.com/cloudfoundry-incubator/datadog-firehose-nozzle/datadogclient"
 	"github.com/cloudfoundry-incubator/datadog-firehose-nozzle/nozzleconfig"
 	"github.com/cloudfoundry/gosteno"
@@ -11,7 +12,6 @@ import (
 	noaaerrors "github.com/cloudfoundry/noaa/errors"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gorilla/websocket"
-	"github.com/pivotal-golang/localip"
 )
 
 type DatadogFirehoseNozzle struct {
