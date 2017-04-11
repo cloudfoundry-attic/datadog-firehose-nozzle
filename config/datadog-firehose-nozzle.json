@@ -9,7 +9,7 @@
   "DataDogTimeoutSeconds": 5,
   "FlushDurationSeconds": 15,
   "InsecureSSLSkipVerify": true,
-  "MetricPrefix": "cf.nozzle",
+  "MetricPrefix": "cf",
   "Deployment": "deployment-name",
   "DeploymentFilter": "deployment-filter",
   "DisableAccessControl": false,
