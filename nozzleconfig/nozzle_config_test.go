@@ -3,7 +3,7 @@ package nozzleconfig_test
 import (
 	"os"
 
-	"github.com/cloudfoundry-incubator/datadog-firehose-nozzle/nozzleconfig"
+	"github.com/DataDog/datadog-firehose-nozzle/nozzleconfig"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
