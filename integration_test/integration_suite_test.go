@@ -18,7 +18,7 @@ var pathToNozzleExecutable string
 
 var _ = BeforeSuite(func() {
 	var err error
-	pathToNozzleExecutable, err = gexec.Build("github.com/cloudfoundry-incubator/datadog-firehose-nozzle")
+	pathToNozzleExecutable, err = gexec.Build("github.com/DataDog/datadog-firehose-nozzle")
 	Expect(err).ShouldNot(HaveOccurred())
 })
 

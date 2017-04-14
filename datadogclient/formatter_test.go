@@ -1,7 +1,7 @@
 package datadogclient_test
 
 import (
-	"github.com/cloudfoundry-incubator/datadog-firehose-nozzle/datadogclient"
+	"github.com/DataDog/datadog-firehose-nozzle/datadogclient"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

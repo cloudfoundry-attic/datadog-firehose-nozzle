@@ -57,7 +57,7 @@ ginkgo -r
 ### [Bosh](http://bosh.io)
 
 There is a bosh release that will configure, start and monitor the datadog nozzle:
-[https://github.com/cloudfoundry-incubator/datadog-firehose-nozzle-release](https://github.com/cloudfoundry-incubator/datadog-firehose-nozzle-release
+[https://github.com/DataDog/datadog-firehose-nozzle-release](https://github.com/DataDog/datadog-firehose-nozzle-release
 )
 
 ### [Lattice](http://lattice.cf)
@@ -75,7 +75,7 @@ ltc create datadog-nozzle cloudfoundry/datadog-nozzle-lattice \
 The `API KEY` is your datadog API key used to publish metrics. The `METRIC PREFIX` gets prepended to all metric names
 going through the nozzle.
 
-The docker image runs the nozzle with the config provided in [`lattice/lattice-datadog-firehose-nozzle.json`](https://github.com/cloudfoundry-incubator/datadog-firehose-nozzle/blob/master/lattice/lattice-datadog-firehose-nozzle.json).
+The docker image runs the nozzle with the config provided in [`lattice/lattice-datadog-firehose-nozzle.json`](https://github.com/DataDog/datadog-firehose-nozzle/blob/master/lattice/lattice-datadog-firehose-nozzle.json).
 If you are not running lattice locally you will have to also configure the traffic controller URL
 
 ```bash
