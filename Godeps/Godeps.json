@@ -1,0 +1,30 @@
+{
+	"ImportPath": "github.com/cloudfoundry-incubator/datadog-firehose-nozzle",
+	"GoVersion": "go1.4.2",
+	"Deps": [
+		{
+			"ImportPath": "github.com/cloudfoundry-incubator/uaago",
+			"Rev": "1627a524bb8637bae9bbb61c42593db3e436d08f"
+		},
+		{
+			"ImportPath": "github.com/cloudfoundry/noaa",
+			"Rev": "add844f5f6a6e3205b26e6b527bd74a75091022c"
+		},
+		{
+			"ImportPath": "github.com/cloudfoundry/sonde-go/events",
+			"Rev": "4bc2fe0ad24adeffe0833779015638bfa8836024"
+		},
+		{
+			"ImportPath": "github.com/gogo/protobuf/proto",
+			"Rev": "70fa9c3d0dd132958089d5497b5988c9da8c6981"
+		},
+		{
+			"ImportPath": "github.com/gorilla/websocket",
+			"Rev": "b6ab76f1fe9803ee1d59e7e5b2a797c1fe897ce5"
+		},
+		{
+			"ImportPath": "github.com/pivotal-golang/localip",
+			"Rev": "c773e5fa43049a431973996f93afa7ee10312139"
+		}
+	]
+}
