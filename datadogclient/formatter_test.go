@@ -17,7 +17,7 @@ var _ = Describe("Formatter", func() {
 	})
 
 	It("does not return empty data", func() {
-		result := formatter.Format("some-prefix", 1024, nil)
+		result := formatter.FormatMetrics("some-prefix", 1024, nil)
 		Expect(result).To(HaveLen(0))
 	})
 
@@ -28,7 +28,7 @@ var _ = Describe("Formatter", func() {
 				Value: 9,
 			}},
 		}
-		result := formatter.Format("some-prefix", 1, m)
+		result := formatter.FormatMetrics("some-prefix", 1, m)
 
 		Expect(result).To(HaveLen(1))
 	})

@@ -90,7 +90,7 @@ func (d *DatadogFirehoseNozzle) postToDatadog() error {
 			}
 
 			d.handleMessage(envelope)
-			d.client.AddMetric(envelope)
+			d.client.Add(envelope)
 		case err := <-d.errs:
 			d.handleError(err)
 			return err
@@ -99,7 +99,7 @@ func (d *DatadogFirehoseNozzle) postToDatadog() error {
 }
 
 func (d *DatadogFirehoseNozzle) postMetrics() {
-	err := d.client.PostMetrics()
+	err := d.client.Post()
 	if err != nil {
 		d.log.Fatalf("FATAL ERROR: %s\n\n", err)
 	}
