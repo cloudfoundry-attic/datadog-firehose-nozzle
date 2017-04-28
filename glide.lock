@@ -1,0 +1,81 @@
+hash: 49c4ab531a62276baae3f7d28d9611e793a4fccc2a42c5a7cf803951ecc1b780
+updated: 2017-04-05T18:17:12.977510551-04:00
+imports:
+- name: code.cloudfoundry.org/localip
+  version: b88ad0dea95cd41f302cf7eb6ed951efafaf47f2
+- name: github.com/cloudfoundry-incubator/datadog-firehose-nozzle
+  version: 26afd79721d5bd69844315f873136d46d5edc080
+  subpackages:
+  - datadogclient
+  - datadogfirehosenozzle
+  - logger
+  - nozzleconfig
+  - testhelpers
+  - uaatokenfetcher
+- name: github.com/cloudfoundry-incubator/uaago
+  version: 5673cb47f5a48458e28c77e5948503602312de2e
+- name: github.com/cloudfoundry/gosteno
+  version: 0c8581caea35ac903728230e447792e2365dcc34
+  subpackages:
+  - syslog
+- name: github.com/cloudfoundry/noaa
+  version: 086fd462f8fcdde1a234e028e3e157237bdb3383
+  subpackages:
+  - consumer
+  - consumer/internal
+  - errors
+- name: github.com/cloudfoundry/sonde-go
+  version: 78019103037ae46207993c8816e970d85bf1a9e4
+  subpackages:
+  - events
+- name: github.com/gogo/protobuf
+  version: 100ba4e885062801d56799d78530b73b178a78f3
+  subpackages:
+  - gogoproto
+  - proto
+  - protoc-gen-gogo/descriptor
+- name: github.com/gorilla/websocket
+  version: 3ab3a8b8831546bd18fd182c20687ca853b2bb13
+testImports:
+- name: github.com/onsi/ginkgo
+  version: 77a8c1e5c40d6bb6c5eb4dd4bdce9763564f6298
+  subpackages:
+  - config
+  - internal/codelocation
+  - internal/containernode
+  - internal/failer
+  - internal/leafnodes
+  - internal/remote
+  - internal/spec
+  - internal/spec_iterator
+  - internal/specrunner
+  - internal/suite
+  - internal/testingtproxy
+  - internal/writer
+  - reporters
+  - reporters/stenographer
+  - reporters/stenographer/support/go-colorable
+  - reporters/stenographer/support/go-isatty
+  - types
+- name: github.com/onsi/gomega
+  version: 334b8f472b3af5d541c5642701c1e29e2126f486
+  subpackages:
+  - format
+  - gbytes
+  - gexec
+  - internal/assertion
+  - internal/asyncassertion
+  - internal/oraclematcher
+  - internal/testingtsupport
+  - matchers
+  - matchers/support/goraph/bipartitegraph
+  - matchers/support/goraph/edge
+  - matchers/support/goraph/node
+  - matchers/support/goraph/util
+  - types
+- name: golang.org/x/sys
+  version: 39e3dc274464e7d2f663aa606a830611bae5f1db
+  subpackages:
+  - unix
+- name: gopkg.in/yaml.v2
+  version: a3f3340b5840cee44f372bddb5880fcbc419b46a

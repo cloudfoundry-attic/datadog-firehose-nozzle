@@ -1,5 +1,4 @@
 ## Summary
-[![Build Status](https://loggregator.ci.cf-app.com/api/v1/teams/main/pipelines/loggregator/jobs/datadog-nozzle-unit-tests/badge)](https://loggregator.ci.cf-app.com/teams/main/pipelines/loggregator/jobs/datadog-nozzle-unit-tests) [![Coverage Status](https://coveralls.io/repos/cloudfoundry-incubator/datadog-firehose-nozzle/badge.svg)](https://coveralls.io/r/cloudfoundry-incubator/datadog-firehose-nozzle)
 
 The datadog-firehose-nozzle is a CF component which forwards metrics from the Loggregator Firehose to [Datadog](http://www.datadoghq.com/)
 
@@ -19,6 +18,10 @@ properties:
         scope: openid,oauth.approvals,doppler.firehose
         authorities: oauth.login,doppler.firehose
 ```
+
+### Dependencies
+
+We manage dependencies using Glide. So, in order to build, install or run tests, you should first [install glide](https://github.com/Masterminds/glide). Then, `glide install`. 
 
 ### Running
 
@@ -59,51 +62,3 @@ ginkgo -r
 There is a bosh release that will configure, start and monitor the datadog nozzle:
 [https://github.com/DataDog/datadog-firehose-nozzle-release](https://github.com/DataDog/datadog-firehose-nozzle-release
 )
-
-### [Lattice](http://lattice.cf)
-
-There is a docker image which can be used to deploy the datadog nozzle to lattice.
-If you are running lattice locally with Vagrant, you can use the following command
-line to start the nozzle:
-
-```bash
-ltc create datadog-nozzle cloudfoundry/datadog-nozzle-lattice \
-  -e NOZZLE_DATADOGAPIKEY=<API KEY> \
-  -e NOZZLE_METRICPREFIX=<METRIC PREFIX>  --no-monitor
-```
-
-The `API KEY` is your datadog API key used to publish metrics. The `METRIC PREFIX` gets prepended to all metric names
-going through the nozzle.
-
-The docker image runs the nozzle with the config provided in [`lattice/lattice-datadog-firehose-nozzle.json`](https://github.com/DataDog/datadog-firehose-nozzle/blob/master/lattice/lattice-datadog-firehose-nozzle.json).
-If you are not running lattice locally you will have to also configure the traffic controller URL
-
-```bash
-ltc create datadog-nozzle cloudfoundry/datadog-nozzle-lattice \
-  -e NOZZLE_DATADOGAPIKEY=<API KEY> \
-  -e NOZZLE_METRICPREFIX=<METRIC PREFIX> \
-  -e NOZZLE_TRAFFICCONTROLLERURL=<TRAFFICONTROLLER URL>
-```
-
-Any of the configuration parameters can be overloaded by using environment variables. The following
-parameters are supported
-
-| Environment variable          | Description            |
-|-------------------------------|------------------------|
-| NOZZLE_UAAURL                 | UAA URL which the nozzle uses to get an authentication token for the firehose |
-| NOZZLE_CLIENT                 | Client who has access to the firehose |
-| NOZZLE_CLIENT_SECRET          | Secret for the client |
-| NOZZLE_TRAFFICCONTROLLERURL   | Loggregator's traffic controller URL |
-| NOZZLE_FIREHOSESUBSCRIPTIONID | Subscription ID used when connecting to the firehose. Nozzles with the same subscription ID get a proportional share of the firehose |
-| NOZZLE_DATADOGURL             | The Datadog API URL |
-| NOZZLE_DATADOGAPIKEY          | The API key used when publishing metrics to datadog |
-| NOZZLE_DATADOGTIMEOUTSECONDS  | The number of seconds to set the timeout for writes to Datadog |
-| NOZZLE_METRICPREFIX           | The metric prefix is prepended to all metrics flowing through the nozzle |
-| NOZZLE_DEPLOYMENT             | The deployment name for the nozzle. Used for tagging metrics internal to the nozzle |
-| NOZZLE_DEPLOYMENT_FILTER      | If set, the nozzle will only send metrics with this deployment name |
-| NOZZLE_FLUSHDURATIONSECONDS   | Number of seconds to buffer data before publishing to Datadog |
-| NOZZLE_INSECURESSLSKIPVERIFY  | If true, allows insecure connections to the UAA and the Trafficcontroller |
-| NOZZLE_DISABLEACCESSCONTROL   | If true, disables authentication with the UAA. Used in lattice deployments |
-
-### CI
-The concourse pipeline for the datadog nozzle is present [here](https://loggregator.ci.cf-app.com/pipelines/nozzles?groups=datadog-nozzle)

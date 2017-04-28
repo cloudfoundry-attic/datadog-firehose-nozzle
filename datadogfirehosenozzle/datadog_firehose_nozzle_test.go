@@ -50,7 +50,7 @@ var _ = Describe("Datadog Firehose Nozzle", func() {
 			DataDogURL:           fakeDatadogAPI.URL(),
 			TrafficControllerURL: strings.Replace(fakeFirehose.URL(), "http:", "ws:", 1),
 			DisableAccessControl: false,
-			MetricPrefix:         "cf.",
+			MetricPrefix:         "datadog.nozzle.",
 			Deployment:           "nozzle-deployment",
 		}
 		content := make([]byte, 1024)
