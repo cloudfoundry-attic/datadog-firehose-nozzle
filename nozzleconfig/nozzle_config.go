@@ -59,7 +59,7 @@ func Parse(configPath string) (*NozzleConfig, error) {
 	overrideWithEnvUint32("NOZZLE_IDLETIMEOUTSECONDS", &config.IdleTimeoutSeconds)
 
 	if config.MetricPrefix == "" {
-		config.MetricPrefix = "cloudfoundry.nozzle"
+		config.MetricPrefix = "cloudfoundry.nozzle."
 	}
 
 	return &config, nil
