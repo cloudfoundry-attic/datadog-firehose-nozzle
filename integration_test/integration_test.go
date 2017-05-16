@@ -10,8 +10,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/cloudfoundry-incubator/datadog-firehose-nozzle/datadogclient"
-	. "github.com/cloudfoundry-incubator/datadog-firehose-nozzle/testhelpers"
+	"github.com/DataDog/datadog-firehose-nozzle/datadogclient"
+	. "github.com/DataDog/datadog-firehose-nozzle/testhelpers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
@@ -112,7 +112,7 @@ var _ = Describe("DatadogFirehoseNozzle", func() {
 		for _, metric := range payload.Series {
 			Expect(metric.Type).To(Equal("gauge"))
 
-			if metric.Metric == "origin.metricName" {
+			if metric.Metric == "cloudfoundry.nozzle.origin.metricName" {
 				Expect(metric.Tags).To(HaveLen(2))
 				Expect(metric.Tags[0]).To(Equal("deployment:deployment-name"))
 				if metric.Tags[1] == "job:doppler" {
@@ -132,7 +132,7 @@ var _ = Describe("DatadogFirehoseNozzle", func() {
 				} else {
 					panic("Unknown tag")
 				}
-			} else if metric.Metric == "origin.counterName" {
+			} else if metric.Metric == "cloudfoundry.nozzle.origin.counterName" {
 				Expect(metric.Tags).To(HaveLen(2))
 				Expect(metric.Tags[0]).To(Equal("deployment:deployment-name"))
 				Expect(metric.Tags[1]).To(Equal("job:doppler"))
@@ -143,21 +143,21 @@ var _ = Describe("DatadogFirehoseNozzle", func() {
 						Value:     15.0,
 					},
 				}))
-			} else if metric.Metric == "totalMessagesReceived" {
+			} else if metric.Metric == "cloudfoundry.nozzle.totalMessagesReceived" {
 				Expect(metric.Tags).To(HaveLen(2))
 				Expect(metric.Tags[0]).To(HavePrefix("ip:"))
 				Expect(metric.Tags[1]).To(HavePrefix("deployment:"))
 
 				Expect(metric.Points).To(HaveLen(1))
 				Expect(metric.Points[0].Value).To(Equal(3.0))
-			} else if metric.Metric == "totalMetricsSent" {
+			} else if metric.Metric == "cloudfoundry.nozzle.totalMetricsSent" {
 				Expect(metric.Tags).To(HaveLen(2))
 				Expect(metric.Tags[0]).To(HavePrefix("ip:"))
 				Expect(metric.Tags[1]).To(HavePrefix("deployment:"))
 
 				Expect(metric.Points).To(HaveLen(1))
 				Expect(metric.Points[0].Value).To(Equal(0.0))
-			} else if metric.Metric == "slowConsumerAlert" {
+			} else if metric.Metric == "cloudfoundry.nozzle.slowConsumerAlert" {
 
 			} else {
 				panic("Unknown metric " + metric.Metric)

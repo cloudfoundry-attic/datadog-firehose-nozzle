@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/localip"
-	"github.com/cloudfoundry-incubator/datadog-firehose-nozzle/datadogclient"
-	"github.com/cloudfoundry-incubator/datadog-firehose-nozzle/nozzleconfig"
+	"github.com/DataDog/datadog-firehose-nozzle/datadogclient"
+	"github.com/DataDog/datadog-firehose-nozzle/nozzleconfig"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/noaa/consumer"
 	noaaerrors "github.com/cloudfoundry/noaa/errors"

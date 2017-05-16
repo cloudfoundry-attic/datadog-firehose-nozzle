@@ -3,7 +3,7 @@ package datadogfirehosenozzle_test
 import (
 	"bytes"
 
-	. "github.com/cloudfoundry-incubator/datadog-firehose-nozzle/testhelpers"
+	. "github.com/DataDog/datadog-firehose-nozzle/testhelpers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -12,10 +12,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cloudfoundry-incubator/datadog-firehose-nozzle/datadogclient"
-	"github.com/cloudfoundry-incubator/datadog-firehose-nozzle/datadogfirehosenozzle"
-	"github.com/cloudfoundry-incubator/datadog-firehose-nozzle/nozzleconfig"
-	"github.com/cloudfoundry-incubator/datadog-firehose-nozzle/uaatokenfetcher"
+	"github.com/DataDog/datadog-firehose-nozzle/datadogclient"
+	"github.com/DataDog/datadog-firehose-nozzle/datadogfirehosenozzle"
+	"github.com/DataDog/datadog-firehose-nozzle/nozzleconfig"
+	"github.com/DataDog/datadog-firehose-nozzle/uaatokenfetcher"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
