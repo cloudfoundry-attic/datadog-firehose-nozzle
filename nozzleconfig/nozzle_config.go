@@ -57,6 +57,11 @@ func Parse(configPath string) (*NozzleConfig, error) {
 	overrideWithEnvBool("NOZZLE_INSECURESSLSKIPVERIFY", &config.InsecureSSLSkipVerify)
 	overrideWithEnvBool("NOZZLE_DISABLEACCESSCONTROL", &config.DisableAccessControl)
 	overrideWithEnvUint32("NOZZLE_IDLETIMEOUTSECONDS", &config.IdleTimeoutSeconds)
+
+	if config.MetricPrefix == "" {
+		config.MetricPrefix = "cloudfoundry.nozzle"
+	}
+
 	return &config, nil
 }
 
