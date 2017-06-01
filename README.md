@@ -1,5 +1,6 @@
 ## Summary
-[![Build Status](https://loggregator.ci.cf-app.com/api/v1/teams/main/pipelines/loggregator/jobs/datadog-nozzle-unit-tests/badge)](https://loggregator.ci.cf-app.com/teams/main/pipelines/loggregator/jobs/datadog-nozzle-unit-tests) [![Coverage Status](https://coveralls.io/repos/cloudfoundry-incubator/datadog-firehose-nozzle/badge.svg)](https://coveralls.io/r/cloudfoundry-incubator/datadog-firehose-nozzle)
+[![Build Status][concourse badge]][concourse link]
+[![Coverage Status][coverage badge]][coverage link]
 
 The datadog-firehose-nozzle is a CF component which forwards metrics from the Loggregator Firehose to [Datadog](http://www.datadoghq.com/)
 
@@ -106,4 +107,11 @@ parameters are supported
 | NOZZLE_DISABLEACCESSCONTROL   | If true, disables authentication with the UAA. Used in lattice deployments |
 
 ### CI
-The concourse pipeline for the datadog nozzle is present [here](https://loggregator.ci.cf-app.com/pipelines/nozzles?groups=datadog-nozzle)
+The concourse pipeline for the datadog nozzle is present [here][ci]
+
+
+[ci]: https://loggregator.ci.cf-app.com/teams/main/pipelines/datadog-firehose-nozzle
+[concourse badge]: https://loggregator.ci.cf-app.com/api/v1/teams/main/pipelines/datadog-firehose-nozzle/jobs/datadog-nozzle-unit-tests/badge 
+[concourse link]: https://loggregator.ci.cf-app.com/teams/main/pipelines/datadog-firehose-nozzle/jobs/datadog-nozzle-unit-tests
+[coverage badge]: https://coveralls.io/repos/cloudfoundry-incubator/datadog-firehose-nozzle/badge.svg
+[coverage link]: https://coveralls.io/r/cloudfoundry-incubator/datadog-firehose-nozzle
