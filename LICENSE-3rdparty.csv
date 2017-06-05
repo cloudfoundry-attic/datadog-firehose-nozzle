@@ -1,0 +1,14 @@
+Component,Origin,License,Copyright
+import,github.com/cloudfoundry/sonde-go,Apache-2.0,"sonde-go
+
+Copyright (c) 2015-Present CloudFoundry.org Foundation, Inc. All Rights Reserved."
+import,github.com/onsi/ginkgo,MIT,
+import,github.com/onsi/gomega,MIT,
+import,github.com/gorilla/websocket,BSD-2-Clause,
+import,github.com/cloudfoundry/noaa,MIT,
+import,github.com/gogo/protobuf,BSD-3-Clause,
+import,github.com/cloudfoundry-incubator/uaago,Apache-2.0,"uaago
+
+Copyright (c) 2015-Present CloudFoundry.org Foundation, Inc. All Rights Reserved."
+import,github.com/cloudfoundry/gosteno,Apache-2.0,
+import,code.cloudfoundry.org/localip,Apache-2.0,"Copyright (c) 2015-Present CloudFoundry.org Foundation, Inc. All Rights Reserved."
