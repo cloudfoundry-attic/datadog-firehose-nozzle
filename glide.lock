@@ -1,17 +1,8 @@
-hash: 49c4ab531a62276baae3f7d28d9611e793a4fccc2a42c5a7cf803951ecc1b780
-updated: 2017-04-05T18:17:12.977510551-04:00
+hash: eae737c209a536b3c6630d512aec6c18037326680157552ba90d5ac263b139e0
+updated: 2017-06-29T14:26:35.941015829-04:00
 imports:
 - name: code.cloudfoundry.org/localip
   version: b88ad0dea95cd41f302cf7eb6ed951efafaf47f2
-- name: github.com/cloudfoundry-incubator/datadog-firehose-nozzle
-  version: 26afd79721d5bd69844315f873136d46d5edc080
-  subpackages:
-  - datadogclient
-  - datadogfirehosenozzle
-  - logger
-  - nozzleconfig
-  - testhelpers
-  - uaatokenfetcher
 - name: github.com/cloudfoundry-incubator/uaago
   version: 5673cb47f5a48458e28c77e5948503602312de2e
 - name: github.com/cloudfoundry/gosteno

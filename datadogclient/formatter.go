@@ -31,6 +31,7 @@ func formatMetrics(prefix string, data map[MetricKey]MetricValue) []byte {
 			Points: mVal.Points,
 			Type:   "gauge",
 			Tags:   mVal.Tags,
+			Host:   mVal.Host,
 		})
 	}
 

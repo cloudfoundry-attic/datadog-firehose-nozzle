@@ -43,6 +43,7 @@ type MetricKey struct {
 type MetricValue struct {
 	Tags   []string
 	Points []Point
+	Host   string
 }
 
 type Payload struct {
@@ -107,6 +108,8 @@ func (c *Client) AddMetric(envelope *events.Envelope) {
 	}
 
 	tags := parseTags(envelope)
+	host := parseHost(envelope)
+
 	key := MetricKey{
 		EventType: envelope.GetEventType(),
 		Name:      getName(envelope),
@@ -116,6 +119,7 @@ func (c *Client) AddMetric(envelope *events.Envelope) {
 	mVal := c.metricPoints[key]
 	value := getValue(envelope)
 
+	mVal.Host = host
 	mVal.Tags = tags
 	mVal.Points = append(mVal.Points, Point{
 		Timestamp: envelope.GetTimestamp() / int64(time.Second),
@@ -241,10 +245,22 @@ func parseTags(envelope *events.Envelope) []string {
 	tags = appendTagIfNotEmpty(tags, "job", envelope.GetJob())
 	tags = appendTagIfNotEmpty(tags, "index", envelope.GetIndex())
 	tags = appendTagIfNotEmpty(tags, "ip", envelope.GetIp())
+	tags = appendTagIfNotEmpty(tags, "origin", envelope.GetOrigin())
+	tags = appendTagIfNotEmpty(tags, "name", envelope.GetOrigin())
 	for tname, tvalue := range envelope.GetTags() {
 		tags = appendTagIfNotEmpty(tags, tname, tvalue)
 	}
 	return tags
+}
+
+func parseHost(envelope *events.Envelope) string {
+	if envelope.GetIndex() != "" {
+		return envelope.GetIndex()
+	} else if envelope.GetOrigin() != "" {
+		return envelope.GetOrigin()
+	}
+
+	return ""
 }
 
 func appendTagIfNotEmpty(tags []string, key, value string) []string {

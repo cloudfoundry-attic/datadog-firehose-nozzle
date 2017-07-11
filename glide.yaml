@@ -1,13 +1,6 @@
 package: .
 import:
 - package: code.cloudfoundry.org/localip
-- package: github.com/cloudfoundry-incubator/datadog-firehose-nozzle
-  subpackages:
-  - datadogclient
-  - datadogfirehosenozzle
-  - logger
-  - nozzleconfig
-  - uaatokenfetcher
 - package: github.com/cloudfoundry-incubator/uaago
 - package: github.com/cloudfoundry/gosteno
 - package: github.com/cloudfoundry/noaa

@@ -144,6 +144,8 @@ var _ = Describe("DatadogClient", func() {
 			"index:1",
 			"ip:10.0.1.2",
 			"protocol:http",
+			"name:test-origin",
+			"origin:test-origin",
 			"request_id:a1f5-deadbeef",
 		))
 	})
@@ -196,20 +198,24 @@ var _ = Describe("DatadogClient", func() {
 		Expect(payload.Series).To(ContainMetricWithTags(
 			"datadog.nozzle.test-origin.",
 			"deployment:deployment-name",
-			"job:doppler",
 			"index:1",
 			"ip:10.0.1.2",
-			"protocol:http",
-			"request_id:a1f5-deadbeef",
+			"job:doppler",
+			"name:test-origin",
+			"origin:test-origin",
+			"protocol:https",
+			"request_id:d3ac-livefood",
 		))
 		Expect(payload.Series).To(ContainMetricWithTags(
 			"datadog.nozzle.test-origin.",
 			"deployment:deployment-name",
-			"job:doppler",
 			"index:1",
 			"ip:10.0.1.2",
-			"protocol:https",
-			"request_id:d3ac-livefood",
+			"job:doppler",
+			"name:test-origin",
+			"origin:test-origin",
+			"protocol:http",
+			"request_id:a1f5-deadbeef",
 		))
 	})
 
@@ -328,7 +334,12 @@ var _ = Describe("DatadogClient", func() {
 						Value:     76.0,
 					},
 				}))
-				Expect(metric.Tags).To(Equal([]string{"deployment:deployment-name", "job:doppler"}))
+				Expect(metric.Tags).To(Equal([]string{
+					"deployment:deployment-name",
+					"job:doppler",
+					"name:origin",
+					"origin:origin",
+				}))
 			}
 		}
 		Expect(metricFound).To(BeTrue())
@@ -424,7 +435,7 @@ var _ = Describe("DatadogClient", func() {
 			Expect(metric.Type).To(Equal("gauge"))
 
 			if metric.Metric == "datadog.nozzle.origin.metricName" {
-				Expect(metric.Tags).To(HaveLen(2))
+				Expect(metric.Tags).To(HaveLen(4))
 				Expect(metric.Tags[0]).To(Equal("deployment:deployment-name"))
 				if metric.Tags[1] == "job:doppler" {
 					dopplerFound = true
