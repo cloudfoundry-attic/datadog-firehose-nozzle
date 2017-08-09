@@ -189,8 +189,11 @@ func (c *Client) postEvents() error {
 
 	c.totalMetricsSent += uint64(numEvents)
 	for _, event := range c.events {
-
-		eventBytes := c.formatter.FormatEvent(c.prefix, c.maxPostBytes, event)
+		eventBytes, err := c.formatter.FormatEvent(c.prefix, c.maxPostBytes, event)
+		if err != nil {
+			c.log.Warn("Cannot format event")
+			continue
+		}
 		c.events = make([]Event, 0)
 
 		if err := c.sendData(eventBytes, c.eventsURL()); err != nil {

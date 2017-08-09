@@ -23,10 +23,13 @@ func (f Formatter) FormatMetrics(prefix string, maxPostBytes uint32, data map[Me
 	return result
 }
 
-func (f Formatter) FormatEvent(prefix string, maxPostBytes uint32, event Event) [][]byte {
+func (f Formatter) FormatEvent(prefix string, maxPostBytes uint32, event Event) ([][]byte, error) {
 	var result [][]byte
-	eventsBytes, _ := json.Marshal(event)
-	return append(result, eventsBytes)
+	eventsBytes, err := json.Marshal(event)
+	if err != nil {
+		return nil, err
+	}
+	return append(result, eventsBytes), err
 }
 
 func formatMetrics(prefix string, data map[MetricKey]MetricValue) []byte {
