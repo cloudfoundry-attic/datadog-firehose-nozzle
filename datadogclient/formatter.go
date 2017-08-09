@@ -4,7 +4,7 @@ import "encoding/json"
 
 type Formatter struct{}
 
-func (f Formatter) Format(prefix string, maxPostBytes uint32, data map[MetricKey]MetricValue) [][]byte {
+func (f Formatter) FormatMetrics(prefix string, maxPostBytes uint32, data map[MetricKey]MetricValue) [][]byte {
 	if len(data) == 0 {
 		return nil
 	}
@@ -13,14 +13,23 @@ func (f Formatter) Format(prefix string, maxPostBytes uint32, data map[MetricKey
 	seriesBytes := formatMetrics(prefix, data)
 	if uint32(len(seriesBytes)) > maxPostBytes && canSplit(data) {
 		metricsA, metricsB := splitPoints(data)
-		result = append(result, f.Format(prefix, maxPostBytes, metricsA)...)
-		result = append(result, f.Format(prefix, maxPostBytes, metricsB)...)
+		result = append(result, f.FormatMetrics(prefix, maxPostBytes, metricsA)...)
+		result = append(result, f.FormatMetrics(prefix, maxPostBytes, metricsB)...)
 
 		return result
 	}
 
 	result = append(result, seriesBytes)
 	return result
+}
+
+func (f Formatter) FormatEvent(prefix string, maxPostBytes uint32, event Event) ([][]byte, error) {
+	var result [][]byte
+	eventsBytes, err := json.Marshal(event)
+	if err != nil {
+		return nil, err
+	}
+	return append(result, eventsBytes), err
 }
 
 func formatMetrics(prefix string, data map[MetricKey]MetricValue) []byte {

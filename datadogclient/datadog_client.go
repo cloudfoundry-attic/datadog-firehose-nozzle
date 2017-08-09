@@ -22,6 +22,7 @@ type Client struct {
 	apiURL                string
 	apiKey                string
 	metricPoints          map[MetricKey]MetricValue
+	events                []Event
 	prefix                string
 	deployment            string
 	ip                    string
@@ -55,6 +56,18 @@ type Metric struct {
 	Type   string   `json:"type"`
 	Host   string   `json:"host,omitempty"`
 	Tags   []string `json:"tags,omitempty"`
+}
+
+type Event struct {
+	Title          string   `json:"title"`
+	Text           string   `json:"text"`
+	DateHappened   int64    `json:"date_happened,omitempty"`
+	Host           string   `json:"host,omitempty"`
+	Priority       string   `json:"priority,omitempty"`
+	Tags           []string `json:"tags,omitempty"`
+	AlertType      string   `json:"alert_type,omitempty"`
+	AggregationKey string   `json:"aggregation_key,omitempty"`
+	SourceTypeName string   `json:"source_type_name,omitempty"`
 }
 
 type Point struct {
@@ -100,12 +113,20 @@ func (c *Client) AlertSlowConsumerError() {
 	c.addInternalMetric("slowConsumerAlert", uint64(1))
 }
 
-func (c *Client) AddMetric(envelope *events.Envelope) {
+func (c *Client) Add(envelope *events.Envelope) {
 	c.totalMessagesReceived++
-	if envelope.GetEventType() != events.Envelope_ValueMetric && envelope.GetEventType() != events.Envelope_CounterEvent {
+
+	switch envelope.GetEventType() {
+	case events.Envelope_CounterEvent, events.Envelope_ValueMetric:
+		c.addMetric(envelope)
+	case events.Envelope_Error:
+		c.addEvent(envelope)
+	default:
 		return
 	}
+}
 
+func (c *Client) addMetric(envelope *events.Envelope) {
 	tags := parseTags(envelope)
 	key := MetricKey{
 		EventType: envelope.GetEventType(),
@@ -125,22 +146,56 @@ func (c *Client) AddMetric(envelope *events.Envelope) {
 	c.metricPoints[key] = mVal
 }
 
-func (c *Client) PostMetrics() error {
+func (c *Client) addEvent(envelope *events.Envelope) {
+	title := fmt.Sprintf("%s: %d", envelope.GetError().GetSource(), envelope.GetError().GetCode())
+	event := Event{
+		Title:        title,
+		Text:         envelope.GetError().GetMessage(),
+		DateHappened: envelope.GetTimestamp() / int64(time.Second),
+		Tags:         parseTags(envelope),
+	}
+
+	c.events = append(c.events, event)
+}
+
+func (c *Client) Post() error {
 	c.populateInternalMetrics()
+
+	if err := c.postMetrics(); err != nil {
+		return err
+	}
+
+	if err := c.postEvents(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *Client) postMetrics() error {
 	numMetrics := len(c.metricPoints)
 	c.log.Infof("Posting %d metrics", numMetrics)
 
 	c.totalMetricsSent += uint64(len(c.metricPoints))
-	seriesBytes := c.formatter.Format(c.prefix, c.maxPostBytes, c.metricPoints)
+	seriesBytes := c.formatter.FormatMetrics(c.prefix, c.maxPostBytes, c.metricPoints)
 	c.metricPoints = make(map[MetricKey]MetricValue)
 
-	for _, data := range seriesBytes {
-		if uint32(len(data)) > c.maxPostBytes {
-			c.log.Infof("Throwing out metric that exceeds %d bytes", c.maxPostBytes)
+	return c.sendData(seriesBytes, c.seriesURL())
+}
+
+func (c *Client) postEvents() error {
+	numEvents := len(c.events)
+	c.log.Infof("Posting %d events", numEvents)
+
+	c.totalMetricsSent += uint64(numEvents)
+	for _, event := range c.events {
+		eventBytes, err := c.formatter.FormatEvent(c.prefix, c.maxPostBytes, event)
+		if err != nil {
+			c.log.Warn("Cannot format event")
 			continue
 		}
 
-		if err := c.postMetrics(data); err != nil {
+		if err := c.sendData(eventBytes, c.eventsURL()); err != nil {
 			return err
 		}
 	}
@@ -148,9 +203,23 @@ func (c *Client) PostMetrics() error {
 	return nil
 }
 
-func (c *Client) postMetrics(seriesBytes []byte) error {
-	url := c.seriesURL()
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(seriesBytes))
+func (c *Client) sendData(data [][]byte, url string) error {
+	for _, chunk := range data {
+		if uint32(len(chunk)) > c.maxPostBytes {
+			c.log.Infof("Throwing out data chunk that exceeds %d bytes", c.maxPostBytes)
+			continue
+		}
+
+		if err := c.send(chunk, url); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (c *Client) send(data []byte, url string) error {
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(data))
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -170,7 +239,12 @@ func (c *Client) postMetrics(seriesBytes []byte) error {
 }
 
 func (c *Client) seriesURL() string {
-	url := fmt.Sprintf("%s?api_key=%s", c.apiURL, c.apiKey)
+	url := fmt.Sprintf("%s/series?api_key=%s", c.apiURL, c.apiKey)
+	return url
+}
+
+func (c *Client) eventsURL() string {
+	url := fmt.Sprintf("%s/events?api_key=%s", c.apiURL, c.apiKey)
 	return url
 }
 
