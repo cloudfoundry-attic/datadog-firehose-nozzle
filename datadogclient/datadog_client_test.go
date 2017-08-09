@@ -336,35 +336,83 @@ var _ = Describe("DatadogClient", func() {
 		validateMetrics(payload, 2, 0)
 	})
 
-	It("posts Error Event in JSON format", func() {
-		c.Add(&events.Envelope{
-			Origin:    proto.String("origin"),
-			Timestamp: proto.Int64(1000000000),
-			EventType: events.Envelope_Error.Enum(),
-			Error: &events.Error{
-				Source:  proto.String("app"),
-				Message: proto.String("application failure"),
-				Code:    proto.Int32(500),
-			},
-			Deployment: proto.String("deployment-name"),
-			Job:        proto.String("doppler"),
+	Context("Error Events", func() {
+		It("posts Error Event in JSON format", func() {
+			c.Add(&events.Envelope{
+				Origin:    proto.String("origin"),
+				Timestamp: proto.Int64(1000000000),
+				EventType: events.Envelope_Error.Enum(),
+				Error: &events.Error{
+					Source:  proto.String("app"),
+					Message: proto.String("application failure"),
+					Code:    proto.Int32(500),
+				},
+				Deployment: proto.String("deployment-name"),
+				Job:        proto.String("doppler"),
+				Tags: map[string]string{
+					"protocol": "http",
+				},
+			})
+
+			err := c.Post()
+			Expect(err).ToNot(HaveOccurred())
+
+			Eventually(bodies).Should(HaveLen(2))
+
+			var payload datadogclient.Payload
+			err = json.Unmarshal(bodies[0], &payload)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(payload.Series).To(HaveLen(3))
+
+			var event datadogclient.Event
+			err = json.Unmarshal(bodies[1], &event)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(event.Title).To(Equal("app: 500"))
+			Expect(event.Text).To(Equal("application failure"))
+			Expect(event.Tags).To(Equal([]string{"deployment:deployment-name", "job:doppler", "protocol:http"}))
 		})
 
-		err := c.Post()
-		Expect(err).ToNot(HaveOccurred())
+		It("posts multiple Error Events in JSON format", func() {
+			c.Add(&events.Envelope{
+				Origin:    proto.String("origin"),
+				Timestamp: proto.Int64(1000000000),
+				EventType: events.Envelope_Error.Enum(),
+				Error: &events.Error{
+					Source:  proto.String("app-one"),
+					Message: proto.String("application failure one"),
+					Code:    proto.Int32(500),
+				},
+				Deployment: proto.String("deployment-name"),
+				Job:        proto.String("doppler"),
+			})
 
-		Eventually(bodies).Should(HaveLen(2))
+			c.Add(&events.Envelope{
+				Origin:    proto.String("origin"),
+				Timestamp: proto.Int64(1000000000),
+				EventType: events.Envelope_Error.Enum(),
+				Error: &events.Error{
+					Source:  proto.String("app-two"),
+					Message: proto.String("application failure two"),
+					Code:    proto.Int32(400),
+				},
+				Deployment: proto.String("deployment-name"),
+				Job:        proto.String("doppler"),
+			})
 
-		eventsFound := false
-		var event datadogclient.Event
-		err = json.Unmarshal(bodies[1], &event)
-		Expect(err).NotTo(HaveOccurred())
+			err := c.Post()
+			Expect(err).ToNot(HaveOccurred())
+			Eventually(bodies).Should(HaveLen(3))
 
-		eventsFound = true
-		Expect(event.Title).To(Equal("app: 500"))
-		Expect(event.Text).To(Equal("application failure"))
-		Expect(event.Tags).To(Equal([]string{"deployment:deployment-name", "job:doppler"}))
-		Expect(eventsFound).To(BeTrue())
+			var event1, event2 datadogclient.Event
+			err = json.Unmarshal(bodies[1], &event1)
+			Expect(err).NotTo(HaveOccurred())
+			err = json.Unmarshal(bodies[2], &event2)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(event1.Title).To(Equal("app-one: 500"))
+			Expect(event2.Title).To(Equal("app-two: 400"))
+		})
 	})
 
 	It("breaks up a message that exceeds the FlushMaxBytes", func() {

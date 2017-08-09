@@ -194,7 +194,6 @@ func (c *Client) postEvents() error {
 			c.log.Warn("Cannot format event")
 			continue
 		}
-		c.events = make([]Event, 0)
 
 		if err := c.sendData(eventBytes, c.eventsURL()); err != nil {
 			return err
