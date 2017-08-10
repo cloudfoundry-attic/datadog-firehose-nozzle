@@ -1,4 +1,4 @@
-package: .
+package: github.com/DataDog/datadog-firehose-nozzle
 import:
 - package: code.cloudfoundry.org/localip
 - package: github.com/cloudfoundry-incubator/uaago
