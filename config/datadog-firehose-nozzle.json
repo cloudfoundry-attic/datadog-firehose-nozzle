@@ -8,6 +8,7 @@
   "DataDogAPIKey": "<enter api key>",
   "DataDogTimeoutSeconds": 5,
   "FlushDurationSeconds": 15,
+  "FlushMaxBytes": 57671680,
   "InsecureSSLSkipVerify": true,
   "MetricPrefix": "datadogclient",
   "Deployment": "deployment-name",
