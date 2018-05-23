@@ -1,3 +1,13 @@
+# THIS REPOSITORY IS A PLACEHOLDER 
+
+This repository is a placeholder for future work and is not a functional bridge between CloudFoundry metric output and CloudWatch metric input.
+
+Your best bet at present to bridge the two is via statsd and its cloudwatch plugin. If you know better, please edit this README.
+
+The README from the datadog-firehose-nozzle now follows:
+
+======
+
 ## Summary
 [![Build Status](https://travis-ci.org/cloudfoundry-incubator/datadog-firehose-nozzle.svg?branch=master)](https://travis-ci.org/cloudfoundry-incubator/datadog-firehose-nozzle) [![Coverage Status](https://coveralls.io/repos/cloudfoundry-incubator/datadog-firehose-nozzle/badge.svg)](https://coveralls.io/r/cloudfoundry-incubator/datadog-firehose-nozzle)
 
