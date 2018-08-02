@@ -3,6 +3,7 @@
 [![Coverage Status][coverage badge]][coverage link]
 
 #### This component has been moved to [DataDog/datadog-firehose-nozzle](https://github.com/DataDog/datadog-firehose-nozzle).
+#### Additionally, the blobs for this release are no longer available. You should not expect to be able to deploy this release.
 
 The datadog-firehose-nozzle is a CF component which forwards metrics from the Loggregator Firehose to [Datadog](http://www.datadoghq.com/)
 
